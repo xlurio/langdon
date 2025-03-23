@@ -9,8 +9,8 @@ CLI for network application reconnaissance
 
 ## Initial configuration
 
-Create a new profile in Firefox with the Firefox Profile Manager and set the path to langdoncli using the following command:
+Create a new profile in Firefox with the Firefox Profile Manager and set the path to langdon using the following command:
 
 ```
-$ langdoncli config set FIREFOX_PROFILE_PATH [path]
+$ langdon config set FIREFOX_PROFILE_PATH [path]
 ```
