@@ -4,7 +4,7 @@ CLI for network application reconnaissance
 
 ## Requirements
 
-- ffmpeg version 7.1.1-1+b1
+- ffmpeg >= 7.1.1-1+b1
 - Python >= 3.12
 - tor >= 0.4.8.14
 
