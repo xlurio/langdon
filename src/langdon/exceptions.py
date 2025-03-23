@@ -1,0 +1,2 @@
+class LangdonException(Exception):
+    pass
