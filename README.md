@@ -4,8 +4,8 @@ CLI for network application reconnaissance
 
 ## Requirements
 
-Python >= 3.12
-tor >= 0.4.8.14
+- Python >= 3.12
+- tor >= 0.4.8.14
 
 ## Initial configuration
 
