@@ -3,7 +3,7 @@ name = "langdon"
 version = "0.1.0"
 description = "Tool for target applications reconnaissance"
 authors = [
-    {name = "MightyKrak3n"}
+    {name = "Lucas Calegario"}
 ]
 license = {text = "The GNU General Public License v3.0"}
 readme = "README.md"
