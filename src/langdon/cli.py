@@ -1,8 +1,9 @@
 import pathlib
-from langdon import initializer
-from langdon import langdon_argparser as argparser
 import sys
 
+from langdon import assetimporter, initializer
+from langdon import langdon_argparser as argparser
+from langdon.langdon_manager import LangdonManager
 from langdon.output import OutputColor
 
 
@@ -19,6 +20,11 @@ def main():
 
     if is_initializing:
         return initializer.initialize(parsed_args)
+
+    with LangdonManager() as manager:
+        return {
+            "importcsv": assetimporter.import_from_csv(parsed_args, manager=manager),
+        }[parsed_args.module]
 
 
 if __name__ == "__main__":

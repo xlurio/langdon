@@ -1,11 +1,13 @@
 import argparse
 import sys
+from collections.abc import Callable, Iterator
+from typing import Literal
 
 
 class LangdonNamespace(argparse.Namespace):
     loglevel: str
     openvpn: str | None
-    module: str
+    module: Literal["init", "importcsv"]
 
 
 def _make_global_arguments_parser(
@@ -46,12 +48,40 @@ def _make_init_parser(
     )
 
 
+def _make_importcsv_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    importcsv_parser = subparsers.add_parser(
+        "importcsv", help="Import target known assets from a CSV file"
+    )
+    importcsv_parser.add_argument(
+        "csv_file",
+        help="path to the CSV with the data to import. The file should have at least "
+        "the columns name, asset_type and max_severity, with the name of the columns "
+        'on the first line. asset_type accepts the value "URL", "WILDCARD", '
+        '"APPLE_STORE_APP_ID", "GOOGLE_PLAY_APP_ID". max_severity accepts “low”, '
+        "“medium”, “high” and “critical.",
+    )
+
+
+ModuleParserFactory = Callable[
+    [argparse._SubParsersAction[argparse.ArgumentParser]], None
+]
+
+
+def _iter_module_parser_factories() -> Iterator[ModuleParserFactory]:
+    yield _make_init_parser
+    yield _make_importcsv_parser
+
+
 def parse_args() -> LangdonNamespace:
     main_parser = argparse.ArgumentParser(
         prog="Langdon", description="Tool for target applications reconnaissance"
     )
     main_parser_w_args = _make_global_arguments_parser(main_parser)
     main_subparsers = main_parser_w_args.add_subparsers(dest="module")
-    _make_init_parser(main_subparsers)
+
+    for module_parser_factory in _iter_module_parser_factories():
+        module_parser_factory(main_subparsers)
 
     return main_parser.parse_args(sys.argv[1:])
