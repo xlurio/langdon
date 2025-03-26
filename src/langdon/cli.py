@@ -3,6 +3,7 @@ import sys
 
 from langdon import assetimporter, initializer
 from langdon import langdon_argparser as argparser
+from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 from langdon.output import OutputColor
 
@@ -17,6 +18,8 @@ def main():
             f"'langdon init' to initialize the project{OutputColor.RESET}"
         )
         sys.exit(1)
+
+    logger.setLevel(parsed_args.loglevel or "CRITICAL")
 
     if is_initializing:
         return initializer.initialize(parsed_args)

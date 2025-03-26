@@ -1,13 +1,11 @@
 from __future__ import annotations
+
 import pathlib
-from typing import TYPE_CHECKING
+from argparse import Namespace
+
 import tomli_w
 
 from langdon.output import OutputColor
-
-
-if TYPE_CHECKING:
-    from argparse import Namespace
 
 
 class InitNamespace(Namespace):

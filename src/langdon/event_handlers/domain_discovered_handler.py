@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from sqlalchemy import sql
+
+from langdon import message_broker
+from langdon.command_executor import CommandData, shell_command_execution_context
+from langdon.events import IpAddressDiscovered
+from langdon.models import Domain
+from langdon.utils import create_if_not_exist
+
+if TYPE_CHECKING:
+    from langdon.events import DomainDiscovered
+    from langdon.langdon_manager import LangdonManager
+
+
+def _resolve_domain(domain_name: str, *, manager: LangdonManager) -> Domain:
+    DomainDiscoveredEvent = manager.get_event_by_name("DomainDiscovered")
+
+    with shell_command_execution_context(
+        CommandData(command="host", args=domain_name), manager=manager
+    ) as result:
+        for line in result.splitlines():
+            if "has address" in line:
+                ip_address = line.split()[-1]
+                message_broker.dispatch_event(
+                    IpAddressDiscovered(address=ip_address), manager=manager
+                )
+
+            if "mail is handled by" in line:
+                mail_server = line.split()[-1]
+                message_broker.dispatch_event(
+                    DomainDiscoveredEvent(name=mail_server),
+                    manager=manager,
+                )
+
+
+def handle_event(event: DomainDiscovered, *, manager: LangdonManager) -> None:
+    if not create_if_not_exist(
+        Domain,
+        name=event.name,
+        manager=manager,
+    ):
+        return
+
+    session = manager.session
+    query = sql.select(Domain).filter(Domain.name == event.name)
+    domain = session.execute(query).scalar_one()
+
+    _resolve_domain(domain.name, manager=manager)

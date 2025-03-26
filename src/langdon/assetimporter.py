@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-import pathlib
-from typing import TYPE_CHECKING
-import pandas as pd
 import re
+from typing import TYPE_CHECKING
+
+import pandas as pd
 
 from langdon.models import AndroidApp, Domain
 
-
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from langdon.langdon_manager import LangdonManager
 
 
 class ImportCSVNamespace:
-    csv_file: pathlib.Path
+    csv_file: Path
 
 
 def _turn_wildcard_into_domain(wildcard: str) -> str:

@@ -1,12 +1,13 @@
 import argparse
+import pathlib
 import sys
 from collections.abc import Callable, Iterator
 from typing import Literal
 
 
 class LangdonNamespace(argparse.Namespace):
-    loglevel: str
-    openvpn: str | None
+    loglevel: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    openvpn: pathlib.Path | None
     module: Literal["init", "importcsv"]
 
 
@@ -23,6 +24,7 @@ def _make_global_arguments_parser(
     main_parser.add_argument(
         "--openvpn",
         "-o",
+        type=pathlib.Path,
         help="OpenVPN client configuration file for VPN tunneling during execution. "
         "Recommended in case you don't have a VPN already enabled",
     )
@@ -38,11 +40,13 @@ def _make_init_parser(
     )
     init_parser.add_argument(
         "filefox_profile",
+        type=pathlib.Path,
         help="Path to the Firefox profile to be used for content discovery",
     )
     init_parser.add_argument(
         "--directory",
         "-d",
+        type=pathlib.Path,
         help="Select a directory to store the reconnaissance results. "
         "Default is the current directory",
     )
@@ -56,6 +60,7 @@ def _make_importcsv_parser(
     )
     importcsv_parser.add_argument(
         "csv_file",
+        type=pathlib.Path,
         help="path to the CSV with the data to import. The file should have at least "
         "the columns name, asset_type and max_severity, with the name of the columns "
         'on the first line. asset_type accepts the value "URL", "WILDCARD", '
