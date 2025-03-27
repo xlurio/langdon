@@ -58,11 +58,36 @@ class IpDomainRel(SqlAlchemyModel):
 
 class WebDirectory(SqlAlchemyModel):
     __tablename__ = "langdon_webdirectories"
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "path", "domain_id", "ip_ip", name="_path_domain_ip_uc"
+        ),
+    )
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
-    path: orm.Mapped[str] = orm.mapped_column(unique=True)
-    domain_id: orm.Mapped[int | None] = orm.mapped_column(sqlalchemy.ForeignKey("langdon_domains.id"), nullable=True)
-    ip_ip: orm.Mapped[int | None] = orm.mapped_column(sqlalchemy.ForeignKey("langdon_ipaddresses.id"), nullable=True)
+    path: orm.Mapped[str]
+    domain_id: orm.Mapped[int | None] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_domains.id"), nullable=True
+    )
+    ip_id: orm.Mapped[int | None] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_ipaddresses.id"), nullable=True
+    )
+
+
+class WebDirectoryResponse(SqlAlchemyModel):
+    __tablename__ = "langdon_webdirectoryresponses"
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "web_directory_id", "response_hash", name="_wd_id_hash_uc"
+        ),
+    )
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    web_directory_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_webdirectories.id")
+    )
+    response_hash: orm.Mapped[str]
+    response_path: orm.Mapped[str]
 
 
 TransportLayerProtocolT = Literal["tcp", "udp"]

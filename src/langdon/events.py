@@ -58,4 +58,12 @@ class PortDiscovered(Event):
 @register_event
 class WebDirectoryDiscovered(Event):
     path: str
-    domain: Domain
+    domain: Domain | None = None
+    ip_address: IpAddress | None = None
+
+
+@register_event
+class WebDirectoryResponseDiscovered(Event):
+    web_directory: WebDirectory
+    response_hash: str
+    response_path: str

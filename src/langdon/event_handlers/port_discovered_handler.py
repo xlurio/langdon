@@ -1,6 +1,8 @@
 from __future__ import annotations  # noqa: I001
 
-from typing import TYPE_CHECKING
+import re
+import tempfile
+from typing import TYPE_CHECKING, cast
 
 from langdon import message_broker
 from langdon.command_executor import (
@@ -10,10 +12,12 @@ from langdon.command_executor import (
     shell_command_execution_context,
 )
 from langdon.content_enumerators import google
-from langdon.events import WebDirectoryDiscovered
-from langdon.models import Domain, IpDomainRel, PortIpRel, UsedPort
+from langdon.events import TechnologyDiscovered, WebDirectoryDiscovered
+from langdon.models import Domain, IpAddress, IpDomainRel, PortIpRel, UsedPort
 from langdon.utils import create_if_not_exist
 from sqlalchemy import sql
+from langdon_logging import logger
+import xml.etree.ElementTree as ET
 
 if TYPE_CHECKING:
     from langdon.events import PortDiscovered
@@ -23,33 +27,56 @@ if TYPE_CHECKING:
 HTTP_PORTS = (80, 443)
 
 
-def _enumerate_web_directories_for_domain(
-    domain: Domain, *, manager: LangdonManager
+def _dispatch_web_directory_discovered(
+    urls: list[str],
+    cleaned_host_name: str,
+    domain: Domain | None,
+    ip_address: IpAddress | None,
+    *,
+    manager: LangdonManager,
 ) -> None:
+    for url in urls:
+        cleaned_path = url.replace(cleaned_host_name, "", 1).strip()
+        message_broker.dispatch_event(
+            WebDirectoryDiscovered(
+                path=cleaned_path,
+                domain=domain,
+                ip_address=ip_address,
+                manager=manager,
+            )
+        )
+
+
+def _enumerate_web_directories(
+    *,
+    domain: Domain | None = None,
+    ip_address: IpAddress | None = None,
+    manager: LangdonManager,
+) -> None:
+    cleaned_host_name = domain.name if domain else ip_address.address
+
     with shell_command_execution_context(
         CommandData(
             command="gau",
-            args=f"--blacklist png,jpg,gif,ttf,woff --fp --json {domain.name}",
+            args=f"--blacklist png,jpg,gif,ttf,woff --fp --json {cleaned_host_name}",
         ),
         manager=manager,
     ) as output:
-        for url in output.splitlines():
-            cleaned_path = url.replace(domain.name, "", 1).strip()
-
-            message_broker.dispatch_event(
-                WebDirectoryDiscovered(
-                    path=cleaned_path, domain=domain, manager=manager
-                )
-            )
+        _dispatch_web_directory_discovered(
+            output.splitlines(), cleaned_host_name, domain, ip_address, manager=manager
+        )
 
     with function_execution_context(
         FunctionData(
             function=google.enumerate_directories,
-            args=[domain.name],
+            args=[cleaned_host_name],
             kwargs={"manager": manager},
-        )
+        ),
+        manager=manager,
     ) as output:
-        raise NotImplementedError("TODO")
+        _dispatch_web_directory_discovered(
+            output, cleaned_host_name, domain, ip_address, manager=manager
+        )
 
 
 def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> None:
@@ -66,21 +93,58 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
             message_broker.dispatch_event(
                 WebDirectoryDiscovered(path="/", domain=domain, manager=manager)
             )
-            _enumerate_web_directories_for_domain(domain, manager=manager)
+            _enumerate_web_directories(domain=domain, manager=manager)
 
-    else:
+    elif event.port == 80:
         message_broker.dispatch_event(
             WebDirectoryDiscovered(
                 path="/", ip_address=event.ip_address, manager=manager
             )
         )
+        _enumerate_web_directories(ip_address=event.ip_address, manager=manager)
+
+    else:
+        logger.error(
+            f"No domain found for IP address {event.ip_address}. Unable to enumerate "
+            "web content in port 443."
+        )
 
 
-def _process_found_port(event: PortDiscovered, *, manager: LangdonManager) -> None:
+def _process_other_ports(
+    port_obj: UsedPort, event: PortDiscovered, *, manager: LangdonManager
+) -> None:
+    with tempfile.NamedTemporaryFile() as temp_file:
+        with shell_command_execution_context(
+            CommandData(
+                command="nmap",
+                args=f"-oX {temp_file.name} -sC -sV -p {port_obj.port} {event.ip_address}",
+            ),
+            manager=manager,
+        ) as result:
+            root = ET.parse(temp_file.name).getroot()
+            technology = cast("str", root.find(".//service").get("product"))
+            technology_re = re.compile(r"([^\s]+)[^\d]*(\d+\.\d+)")
+
+            if re_match := technology_re.match(technology):
+                name, version = re_match.groups()
+            else:
+                name = technology
+                version = None
+
+            message_broker.dispatch_event(
+                TechnologyDiscovered(name=name, version=version, port=port_obj)
+            )
+
+
+def _process_found_port(
+    port_obj: UsedPort, event: PortDiscovered, *, manager: LangdonManager
+) -> None:
     is_http = (event.port in HTTP_PORTS) and (event.transport_layer_protocol == "tcp")
 
     if is_http:
-        _process_http_port(event, manager=manager)
+        return _process_http_port(event, manager=manager)
+
+    return _process_other_ports(port_obj, event, manager=manager)
 
 
 def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
@@ -107,4 +171,4 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
     )
 
     if not already_existed:
-        _process_found_port(event, manager=manager)
+        _process_found_port(port_obj, event, manager=manager)

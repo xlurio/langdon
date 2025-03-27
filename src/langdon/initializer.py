@@ -5,6 +5,7 @@ from argparse import Namespace
 
 import tomli_w
 
+from langdon.exceptions import LangdonException
 from langdon.output import OutputColor
 
 
@@ -25,8 +26,14 @@ def initialize(args: InitNamespace) -> None:
             "database": database_path,
             "web_directories_artifacts": web_directories_artifacts,
             "firefox_profile": firefox_profile,
+            "log_file": str(cleaned_directory / "langdon.log"),
         }
     }
+
+    if toml_path.exists():
+        raise LangdonException(
+            f"There already is a pyproject.toml file in '{cleaned_directory}'"
+        )
 
     with open(toml_path, "w") as f:
         tomli_w.dump(toml_config, f)

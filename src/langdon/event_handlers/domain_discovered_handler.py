@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 
 
 def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
-    DomainDiscoveredEvent = manager.get_event_by_name("DomainDiscovered")
-
     with shell_command_execution_context(
         CommandData(command="host", args=domain.name), manager=manager
     ) as result:
@@ -25,13 +23,7 @@ def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
             if "has address" in line:
                 ip_address = line.split()[-1]
                 message_broker.dispatch_event(
-                    IpAddressDiscovered(address=ip_address, domain=domain), manager=manager
-                )
-
-            if "mail is handled by" in line:
-                mail_server = line.split()[-1]
-                message_broker.dispatch_event(
-                    DomainDiscoveredEvent(name=mail_server, domain=domain),
+                    IpAddressDiscovered(address=ip_address, domain=domain),
                     manager=manager,
                 )
 

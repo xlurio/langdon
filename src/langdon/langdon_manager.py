@@ -36,9 +36,11 @@ class LangdonManager(contextlib.AbstractContextManager):
             self.__config["tool.langdon"]["database"]
         )
 
-    def __enter__(self):
+    def __enter__(self) -> LangdonManager:
         SqlAlchemyModel.metadata.create_all(self.__engine, checkfirst=True)
         self.__session = orm.Session()
+
+        return self
 
     @property
     def session(self) -> orm.Session:

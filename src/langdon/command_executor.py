@@ -4,7 +4,7 @@ import contextlib
 import shlex
 import shutil
 import subprocess
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import pydantic
 from sqlalchemy import sql
@@ -16,6 +16,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
 
     from langdon.langdon_manager import LangdonManager
+
+
+T = TypeVar("T")
 
 
 class CommandData(pydantic.BaseModel):
@@ -79,8 +82,8 @@ def shell_command_execution_context(
     session.commit()
 
 
-class FunctionData(pydantic.BaseModel):
-    function: Callable
+class FunctionData(Generic[T], pydantic.BaseModel):
+    function: Callable[..., T]
     args: Sequence[str] | None = None
     kwargs: Mapping[str, Any] | None = None
 
@@ -91,7 +94,7 @@ class FunctionData(pydantic.BaseModel):
     @property
     def cleaned_kwargs(self) -> Mapping[str, Any]:
         return dict(self.kwargs or {})
-    
+
     @property
     def args_kwargs_str(self) -> str:
         return f"{self.cleaned_args!s} {self.cleaned_kwargs!s}"
@@ -99,16 +102,13 @@ class FunctionData(pydantic.BaseModel):
 
 @contextlib.contextmanager
 def function_execution_context(
-    func_data: FunctionData, *, manager: LangdonManager
-) -> Iterator[Any]:
+    func_data: FunctionData[T], *, manager: LangdonManager
+) -> Iterator[T]:
     session = manager.session
     query = (
         sql.select(ReconProcess)
         .where(ReconProcess.name == func_data.function.__name__)
-        .where(
-            ReconProcess.args
-            == func_data.args_kwargs_str
-        )
+        .where(ReconProcess.args == func_data.args_kwargs_str)
     )
 
     if session.execute(query).scalar_one_or_none() is not None:
