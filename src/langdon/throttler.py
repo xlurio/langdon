@@ -1,7 +1,9 @@
+import random
 import time
 
 _cache = {}
-TIME_BETWEEN_REQUESTS = 5
+MIN_TIME_BETWEEN_REQUESTS = 5
+MAX_TIME_BETWEEN_REQUESTS = 10
 
 
 def wait_for_slot(queue: str):
@@ -9,7 +11,11 @@ def wait_for_slot(queue: str):
         _cache[queue] = time.time()
         return
 
-    while time.time() - _cache[queue] < TIME_BETWEEN_REQUESTS:
+    expected_time_between_requests = random.randint(
+        MIN_TIME_BETWEEN_REQUESTS, MAX_TIME_BETWEEN_REQUESTS
+    )
+
+    while time.time() - _cache[queue] < expected_time_between_requests:
         time.sleep(0.1)
 
     _cache[queue] = time.time()
