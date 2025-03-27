@@ -44,13 +44,12 @@ def _enumerate_vulnerabilities(
 
 
 def handle_event(event: TechnologyDiscovered, *, manager: LangdonManager) -> None:
-    if not create_if_not_exist(
+    already_existed = create_if_not_exist(
         Technology,
         name=event.name,
         version=event.version,
         manager=manager,
-    ):
-        return
+    )
 
     session = manager.session
     query = (
@@ -76,4 +75,5 @@ def handle_event(event: TechnologyDiscovered, *, manager: LangdonManager) -> Non
             manager=manager,
         )
 
-    _enumerate_vulnerabilities(technology, manager=manager)
+    if not already_existed:
+        _enumerate_vulnerabilities(technology, manager=manager)

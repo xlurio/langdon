@@ -15,23 +15,23 @@ if TYPE_CHECKING:
     from langdon.langdon_manager import LangdonManager
 
 
-def _resolve_domain(domain_name: str, *, manager: LangdonManager) -> Domain:
+def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
     DomainDiscoveredEvent = manager.get_event_by_name("DomainDiscovered")
 
     with shell_command_execution_context(
-        CommandData(command="host", args=domain_name), manager=manager
+        CommandData(command="host", args=domain.name), manager=manager
     ) as result:
         for line in result.splitlines():
             if "has address" in line:
                 ip_address = line.split()[-1]
                 message_broker.dispatch_event(
-                    IpAddressDiscovered(address=ip_address), manager=manager
+                    IpAddressDiscovered(address=ip_address, domain=domain), manager=manager
                 )
 
             if "mail is handled by" in line:
                 mail_server = line.split()[-1]
                 message_broker.dispatch_event(
-                    DomainDiscoveredEvent(name=mail_server),
+                    DomainDiscoveredEvent(name=mail_server, domain=domain),
                     manager=manager,
                 )
 
@@ -48,4 +48,4 @@ def handle_event(event: DomainDiscovered, *, manager: LangdonManager) -> None:
     query = sql.select(Domain).filter(Domain.name == event.name)
     domain = session.execute(query).scalar_one()
 
-    _resolve_domain(domain.name, manager=manager)
+    _resolve_domain(domain, manager=manager)

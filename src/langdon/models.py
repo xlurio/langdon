@@ -61,14 +61,40 @@ class WebDirectory(SqlAlchemyModel):
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     path: orm.Mapped[str] = orm.mapped_column(unique=True)
-    domain_id = orm.mapped_column(sqlalchemy.ForeignKey("langdon_domains.id"))
+    domain_id: orm.Mapped[int | None] = orm.mapped_column(sqlalchemy.ForeignKey("langdon_domains.id"), nullable=True)
+    ip_ip: orm.Mapped[int | None] = orm.mapped_column(sqlalchemy.ForeignKey("langdon_ipaddresses.id"), nullable=True)
+
+
+TransportLayerProtocolT = Literal["tcp", "udp"]
 
 
 class UsedPort(SqlAlchemyModel):
     __tablename__ = "langdon_usedports"
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "port",
+            "transport_layer_protocol",
+            "is_filtered",
+            name="_port_tlp_is_filtered_uc",
+        ),
+    )
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
-    port: orm.Mapped[int] = orm.mapped_column(unique=True)
+    port: orm.Mapped[int] = orm.mapped_column()
+    transport_layer_protocol: orm.Mapped[TransportLayerProtocolT]
+    is_filtered: orm.Mapped[bool]
+
+
+class PortIpRel(SqlAlchemyModel):
+    __tablename__ = "langdon_portiprels"
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    port_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_usedports.id")
+    )
+    ip_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_ipaddresses.id")
+    )
 
 
 class Technology(SqlAlchemyModel):

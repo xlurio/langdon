@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from langdon.events import Event
+    from langdon.langdon_t import ConfigurationKeyT
 
 
 _events_mapping = {}
@@ -47,6 +48,10 @@ class LangdonManager(contextlib.AbstractContextManager):
     def get_event_by_name(self, name: str) -> type[Event]:
         """Utility to avoid circular imports."""
         return _events_mapping[name]
+
+    @property
+    def config(self) -> dict[ConfigurationKeyT, str]:
+        return self.__config
 
     def __exit__(
         self,

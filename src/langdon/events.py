@@ -8,7 +8,14 @@ import pydantic
 from langdon.langdon_manager import register_event
 
 if TYPE_CHECKING:
-    from langdon.models import Domain, Technology, UsedPort, WebDirectory
+    from langdon.models import (
+        Domain,
+        IpAddress,
+        Technology,
+        TransportLayerProtocolT,
+        UsedPort,
+        WebDirectory,
+    )
 
 
 class Event(pydantic.BaseModel, abc.ABC): ...
@@ -37,6 +44,15 @@ class DomainDiscovered(Event):
 @register_event
 class IpAddressDiscovered(Event):
     address: str
+    domain: Domain | None
+
+
+@register_event
+class PortDiscovered(Event):
+    port: int
+    transport_layer_protocol: TransportLayerProtocolT
+    is_filtered: bool
+    ip_address: IpAddress
 
 
 @register_event

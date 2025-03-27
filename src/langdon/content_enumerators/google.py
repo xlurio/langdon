@@ -1,20 +1,20 @@
 import abc
-from collections.abc import Iterator
 import tempfile
 import time
+from collections.abc import Iterator
 from typing import cast
-import requests
-from selenium.webdriver.firefox import webdriver
-from selenium.webdriver.firefox import options
-from selenium.webdriver.support import wait, expected_conditions as ec
-from sqlalchemy.orm import Session
-from selenium.webdriver.common.by import By
-from sqlalchemy import sql, exc
+
 import pydub
+import requests
+import speech_recognition as sr
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox import options, webdriver
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.support import wait
+
 from langdon import throttler
 from langdon.exceptions import LangdonException
-from langdon.models import Directory, LangdonConfig
-import speech_recognition as sr
+from langdon.langdon_manager import LangdonManager
 
 BASE_URL = "https://google.com"
 THROTTLING_QUEUE = "throttler_google"
@@ -28,23 +28,10 @@ class GoogleRecognizerType(sr.Recognizer):
         raise NotImplementedError
 
 
-def _make_webdriver(*, session: Session) -> webdriver.WebDriver:
-    firefox_profile_query = (
-        sql.select(LangdonConfig.value)
-        .where(LangdonConfig.name == "FIREFOX_PROFILE_PATH")
-        .limit(1)
-    )
-    try:
-        firefox_profile_path = session.execute(firefox_profile_query).scalar_one()
-    except exc.NoResultFound as exception:
-        raise LangdonException(
-            "Please, configure your FIREFOX_PROFILE_PATH setting with `langdon config "
-            "set FIREFOX_PROFILE_PATH /path/to/firefox/profile`"
-        ) from exception
-
+def _make_webdriver(*, manager: LangdonManager) -> webdriver.WebDriver:
     wd_options = options.Options()
-    # wd_options.add_argument("--headless")
-    wd_options.set_preference("profile", firefox_profile_path)
+    wd_options.add_argument("--headless")
+    wd_options.set_preference("profile", manager.config["filefox_profile"])
     wd_options.set_preference("network.proxy.type", 1)
     wd_options.set_preference("network.proxy.socks", "localhost")
     wd_options.set_preference("network.proxy.socks_port", 9050)
@@ -112,8 +99,8 @@ def _solve_captcha(driver: webdriver.WebDriver) -> None:
         raise LangdonException("Could not solve the captcha")
 
 
-def enumerate_directories(domain: str, *, session: Session) -> Iterator[Directory]:
-    with _make_webdriver(session=session) as driver:
+def enumerate_directories(domain: str, *, manager: LangdonManager) -> Iterator[str]:
+    with _make_webdriver(manager=manager) as driver:
         throttler.wait_for_slot(THROTTLING_QUEUE)
         driver.get(f"https://google.com/search?q=site:{domain}")
         time.sleep(5)
@@ -132,7 +119,7 @@ def enumerate_directories(domain: str, *, session: Session) -> Iterator[Director
                 ):
                     continue
 
-                yield Directory(url=result_url, title=element.text)
+                yield result_url
 
             try:
                 if (
