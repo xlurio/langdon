@@ -1,7 +1,12 @@
-from typing import Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 import sqlalchemy
 from sqlalchemy import orm
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class SqlAlchemyModel(orm.DeclarativeBase): ...
@@ -87,7 +92,17 @@ class WebDirectoryResponse(SqlAlchemyModel):
         sqlalchemy.ForeignKey("langdon_webdirectories.id")
     )
     response_hash: orm.Mapped[str]
-    response_path: orm.Mapped[str]
+    response_path: orm.Mapped[Path]
+
+
+class WebDirectoryResponseScreenshot(SqlAlchemyModel):
+    __tablename__ = "langdon_webdirectoryresponsescreenshots"
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    web_directory_response_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_webdirectoryresponses.id"), unique=True
+    )
+    screenshot_path: orm.Mapped[Path]
 
 
 TransportLayerProtocolT = Literal["tcp", "udp"]

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import message_broker
+from langdon import message_broker, throttler
 from langdon.command_executor import CommandData, shell_command_execution_context
 from langdon.events import IpAddressDiscovered
 from langdon.models import Domain
@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 
 def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
+    throttler.wait_for_slot(f"throttle_{domain.name}")
+
     with shell_command_execution_context(
         CommandData(command="host", args=domain.name), manager=manager
     ) as result:

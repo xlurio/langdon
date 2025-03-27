@@ -27,8 +27,9 @@ def _clean_hostname(web_directory: WebDirectory, *, manager: LangdonManager) -> 
 
 def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) -> None:
     cleaned_hostname = _clean_hostname(web_directory, manager=manager)
+    cleaned_directory_path = web_directory.path.lstrip("/")
     artifact_directory = pathlib.Path(
-        f"{manager.config['web_directories_artifacts']}/{cleaned_hostname}/{web_directory.path}"
+        f"{manager.config['web_directories_artifacts']}/{cleaned_hostname}/{cleaned_directory_path}"
     )
     httpx_file_name = f"get_{uuid.uuid4()}.httpx"
 
@@ -37,7 +38,7 @@ def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) 
     with shell_command_execution_context(
         CommandData(
             command="httpx",
-            args=f"https://{cleaned_hostname}/{web_directory.path} "
+            args=f"https://{cleaned_hostname}/{cleaned_directory_path} "
             f"--download {artifact_directory / httpx_file_name!s}",
         ),
         manager=manager,

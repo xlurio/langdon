@@ -1,10 +1,11 @@
 from __future__ import annotations  # noqa: I001
 
+import csv
 import re
 import tempfile
 from typing import TYPE_CHECKING, cast
 
-from langdon import message_broker
+from langdon import message_broker, throttler
 from langdon.command_executor import (
     CommandData,
     FunctionData,
@@ -78,6 +79,28 @@ def _enumerate_web_directories(
             output, cleaned_host_name, domain, ip_address, manager=manager
         )
 
+    throttler.wait_for_slot(f"throttle_{cleaned_host_name}")
+
+    with tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file:
+        with shell_command_execution_context(
+            CommandData(
+                command="wafw00f",
+                args=f"-f csv -o {temp_file} -p socks5://localhost:9050 --no-colors "
+                f"https://{cleaned_host_name}",
+            )
+        ) as output:
+            temp_file.seek(0)
+            reader = csv.DictReader(temp_file)
+            for row in reader:
+                message_broker.dispatch_event(
+                    TechnologyDiscovered(
+                        name=row["firewall"],
+                        version=None,
+                        domain=domain,
+                        ip_address=ip_address,
+                    )
+                )
+
 
 def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> None:
     domain_ids_subquery = (
@@ -113,6 +136,8 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
 def _process_other_ports(
     port_obj: UsedPort, event: PortDiscovered, *, manager: LangdonManager
 ) -> None:
+    throttler.wait_for_slot(f"throttle_{event.ip_address.address}")
+
     with tempfile.NamedTemporaryFile() as temp_file:
         with shell_command_execution_context(
             CommandData(

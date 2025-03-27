@@ -8,6 +8,8 @@ import pydantic
 from langdon.langdon_manager import register_event
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from langdon.models import (
         Domain,
         IpAddress,
@@ -31,9 +33,9 @@ class VulnerabilityDiscovered(Event):
 @register_event
 class TechnologyDiscovered(Event):
     name: str
-    version: str | None
-    directory: WebDirectory | None
-    port: UsedPort | None
+    version: str | None = None
+    directory: WebDirectory | None = None
+    port: UsedPort | None = None
 
 
 @register_event
@@ -44,7 +46,7 @@ class DomainDiscovered(Event):
 @register_event
 class IpAddressDiscovered(Event):
     address: str
-    domain: Domain | None
+    domain: Domain | None = None
 
 
 @register_event
@@ -66,4 +68,4 @@ class WebDirectoryDiscovered(Event):
 class WebDirectoryResponseDiscovered(Event):
     web_directory: WebDirectory
     response_hash: str
-    response_path: str
+    response_path: Path

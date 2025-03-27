@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import message_broker
+from langdon import message_broker, throttler
 from langdon.command_executor import CommandData, shell_command_execution_context
 from langdon.events import PortDiscovered
 from langdon.models import IpAddress, IpDomainRel
@@ -46,7 +46,9 @@ def _process_nmap_output(output: str, *, ip_address: IpAddress) -> None:
         )
 
 
-def _enumerate_ports(ip_address: IpAddress, *, manager: LangdonManager) -> None:
+def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
+    throttler.wait_for_slot(f"throttle_{ip_address.address}")
+
     with NamedTemporaryFile("w+b", suffix=".xml") as temp_file:
         with shell_command_execution_context(
             CommandData(
@@ -80,4 +82,4 @@ def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None
         )
 
     if not was_already_discovered:
-        _enumerate_ports(ip_address, manager=manager)
+        _process_ip_address(ip_address, manager=manager)
