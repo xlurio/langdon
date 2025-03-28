@@ -13,7 +13,7 @@ class GraphGeneratorNamespace(argparse.Namespace):
     output: Path
 
 
-def generate_graph(parsed_args: argparse.Namespace, *manager: LangdonManager) -> None:
+def generate_graph(parsed_args: GraphGeneratorNamespace, *manager: LangdonManager) -> None:
     """
     Generate a graph of the known assets using the Graphviz library.
     """
