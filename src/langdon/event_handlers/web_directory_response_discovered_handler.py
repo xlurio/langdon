@@ -1,17 +1,22 @@
+from __future__ import annotations
+
 import csv
 import glob
 import os
 import pathlib
 import tempfile
+from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
 from langdon import message_broker, throttler
 from langdon.command_executor import CommandData, shell_command_execution_context
 from langdon.events import TechnologyDiscovered, WebDirectoryResponseDiscovered
-from langdon.langdon_manager import LangdonManager
 from langdon.models import Domain, WebDirectoryResponse, WebDirectoryResponseScreenshot
 from langdon.utils import create_if_not_exist
+
+if TYPE_CHECKING:
+    from langdon.langdon_manager import LangdonManager
 
 
 def _process_new_response(

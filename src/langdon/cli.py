@@ -1,8 +1,16 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 import sys
 
-from langdon import assetimporter, initializer, langdon_logging, recon_executor
+from langdon import (
+    assetimporter,
+    graph_generator,
+    initializer,
+    langdon_logging,
+    recon_executor,
+)
 from langdon import langdon_argparser as argparser
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
@@ -34,6 +42,7 @@ def main():
         return {
             "importcsv": assetimporter.import_from_csv(parsed_args, manager=manager),
             "run": recon_executor.run_recon(parsed_args, manager=manager),
+            "graph": graph_generator.generate_graph(parsed_args, manager=manager),
         }[parsed_args.module]
 
 

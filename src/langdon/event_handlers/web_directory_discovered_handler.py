@@ -1,15 +1,20 @@
+from __future__ import annotations
+
 import hashlib
 import pathlib
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
 from langdon import message_broker, throttler
 from langdon.command_executor import CommandData, shell_command_execution_context
 from langdon.events import WebDirectoryDiscovered, WebDirectoryResponseDiscovered
-from langdon.langdon_manager import LangdonManager
 from langdon.models import Domain, IpAddress, WebDirectory
 from langdon.utils import create_if_not_exist
+
+if TYPE_CHECKING:
+    from langdon.langdon_manager import LangdonManager
 
 
 def _clean_hostname(web_directory: WebDirectory, *, manager: LangdonManager) -> str:

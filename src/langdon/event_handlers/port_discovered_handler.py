@@ -1,9 +1,14 @@
-from __future__ import annotations  # noqa: I001
+from __future__ import annotations
 
 import csv
 import re
 import tempfile
+import urllib.parse
+import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING, cast
+
+from langdon_logging import logger
+from sqlalchemy import sql
 
 from langdon import message_broker, throttler
 from langdon.command_executor import (
@@ -20,10 +25,6 @@ from langdon.events import (
 )
 from langdon.models import Domain, IpAddress, IpDomainRel, PortIpRel, UsedPort
 from langdon.utils import create_if_not_exist
-from sqlalchemy import sql
-from langdon_logging import logger
-import xml.etree.ElementTree as ET
-import urllib.parse
 
 if TYPE_CHECKING:
     from langdon.events import PortDiscovered

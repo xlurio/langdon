@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import abc
 import tempfile
 import time
-from collections.abc import Iterator
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import pydub
 import requests
@@ -14,7 +15,11 @@ from selenium.webdriver.support import wait
 
 from langdon import throttler
 from langdon.exceptions import LangdonException
-from langdon.langdon_manager import LangdonManager
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from langdon.langdon_manager import LangdonManager
 
 BASE_URL = "https://google.com"
 THROTTLING_QUEUE = "throttler_google"

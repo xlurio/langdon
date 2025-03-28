@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import pathlib
 import sys
@@ -94,6 +96,20 @@ def _make_run_parser(
     subparsers.add_parser("run", help="Run Langdon reconnaissance on the known assets")
 
 
+def _make_graph_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    graph_parser = subparsers.add_parser(
+        "graph", help="Generate a graph of the known assets"
+    )
+    graph_parser.add_argument(
+        "--output",
+        "-o",
+        type=pathlib.Path,
+        default=pathlib.Path("graph.png"),
+        help="Path to the output file. Default is graph.png",
+    )
+
 ModuleParserFactory = Callable[
     [argparse._SubParsersAction[argparse.ArgumentParser]], None
 ]
@@ -103,6 +119,7 @@ def _iter_module_parser_factories() -> Iterator[ModuleParserFactory]:
     yield _make_init_parser
     yield _make_importcsv_parser
     yield _make_run_parser
+    yield _make_graph_parser
 
 
 def parse_args() -> LangdonNamespace:

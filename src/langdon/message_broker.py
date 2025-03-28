@@ -1,4 +1,6 @@
-from typing import TypeVar
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypeVar
 
 from langdon.event_handlers import (
     domain_discovered_handler,
@@ -19,7 +21,9 @@ from langdon.events import (
     WebDirectoryDiscovered,
     WebDirectoryResponseDiscovered,
 )
-from langdon.langdon_manager import LangdonManager
+
+if TYPE_CHECKING:
+    from langdon.langdon_manager import LangdonManager
 
 EVENT_HANDLERS_MAPPING = {
     VulnerabilityDiscovered: vulnerability_discovered_handler.handle_event,
