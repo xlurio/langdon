@@ -111,7 +111,7 @@ def _make_graph_parser(
     )
 
 ModuleParserFactory = Callable[
-    [argparse._SubParsersAction[argparse.ArgumentParser]], None
+    ["argparse._SubParsersAction[argparse.ArgumentParser]"], None
 ]
 
 

@@ -87,7 +87,7 @@ def shell_command_execution_context(
     session.commit()
 
 
-class FunctionData(Generic[T], pydantic.BaseModel):
+class FunctionData(pydantic.BaseModel, Generic[T]):
     function: Callable[..., T]
     args: Sequence[str] | None = None
     kwargs: Mapping[str, Any] | None = None

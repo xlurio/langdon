@@ -67,7 +67,7 @@ def handle_event(event: WebDirectoryDiscovered, *, manager: LangdonManager) -> N
         WebDirectory,
         path=event.path,
         domain_id=event.domain.id if event.domain else None,
-        ip_ip=event.ip_address.id if event.ip_address else None,
+        ip_id=event.ip_address.id if event.ip_address else None,
         manager=manager,
     )
 

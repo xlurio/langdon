@@ -7,7 +7,6 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING, cast
 
-from langdon_logging import logger
 from sqlalchemy import sql
 
 from langdon import message_broker, throttler
@@ -23,6 +22,7 @@ from langdon.events import (
     TechnologyDiscovered,
     WebDirectoryDiscovered,
 )
+from langdon.langdon_logging import logger
 from langdon.models import Domain, IpAddress, IpDomainRel, PortIpRel, UsedPort
 from langdon.utils import create_if_not_exist
 

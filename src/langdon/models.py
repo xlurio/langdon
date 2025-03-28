@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import sqlalchemy
 from sqlalchemy import orm
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class SqlAlchemyModel(orm.DeclarativeBase): ...
@@ -68,7 +65,7 @@ class WebDirectory(SqlAlchemyModel):
     __tablename__ = "langdon_webdirectories"
     __table_args__ = (
         sqlalchemy.UniqueConstraint(
-            "path", "domain_id", "ip_ip", name="_path_domain_ip_uc"
+            "path", "domain_id", "ip_id", name="_path_domain_ip_uc"
         ),
     )
 
@@ -78,7 +75,7 @@ class WebDirectory(SqlAlchemyModel):
         sqlalchemy.ForeignKey("langdon_domains.id"), nullable=True
     )
     domain: orm.Mapped[Domain | None] = orm.relationship(
-        back_populates="web_directories", nullable=True
+        back_populates="web_directories"
     )
     ip_id: orm.Mapped[int | None] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_ipaddresses.id"), nullable=True
@@ -98,7 +95,7 @@ class WebDirectoryResponse(SqlAlchemyModel):
         sqlalchemy.ForeignKey("langdon_webdirectories.id")
     )
     response_hash: orm.Mapped[str]
-    response_path: orm.Mapped[Path]
+    response_path: orm.Mapped[str]
 
 
 class WebDirectoryResponseScreenshot(SqlAlchemyModel):
@@ -108,7 +105,7 @@ class WebDirectoryResponseScreenshot(SqlAlchemyModel):
     web_directory_response_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_webdirectoryresponses.id"), unique=True
     )
-    screenshot_path: orm.Mapped[Path]
+    screenshot_path: orm.Mapped[str]
 
 
 TransportLayerProtocolT = Literal["tcp", "udp"]
