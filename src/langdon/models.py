@@ -29,6 +29,9 @@ class Domain(SqlAlchemyModel):
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     name: orm.Mapped[str] = orm.mapped_column(unique=True)
     was_known: orm.Mapped[bool]
+    web_directories: orm.Mapped[list[WebDirectory]] = orm.relationship(
+        back_populates="domain", cascade="all, delete-orphan"
+    )
 
 
 class AndroidApp(SqlAlchemyModel):
@@ -73,6 +76,9 @@ class WebDirectory(SqlAlchemyModel):
     path: orm.Mapped[str]
     domain_id: orm.Mapped[int | None] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_domains.id"), nullable=True
+    )
+    domain: orm.Mapped[Domain | None] = orm.relationship(
+        back_populates="web_directories", nullable=True
     )
     ip_id: orm.Mapped[int | None] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_ipaddresses.id"), nullable=True

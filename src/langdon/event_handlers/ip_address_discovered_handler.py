@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import message_broker, throttler
+from langdon import message_broker
 from langdon.command_executor import CommandData, shell_command_execution_context
 from langdon.events import PortDiscovered
+from langdon.langdon_logging import logger
 from langdon.models import IpAddress, IpDomainRel
 from langdon.utils import create_if_not_exist
 
@@ -47,12 +48,10 @@ def _process_nmap_output(output: str, *, ip_address: IpAddress) -> None:
 
 
 def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
-    throttler.wait_for_slot(f"throttle_{ip_address.address}")
-
     with NamedTemporaryFile("w+b", suffix=".xml") as temp_file:
         with shell_command_execution_context(
             CommandData(
-                "nmap", f"-Pn -sS -oX '{temp_file.name}' '{ip_address.address}'"
+                "nmap", f"-Pn -sS -sU -oX '{temp_file.name}' '{ip_address.address}'"
             ),
             manager=manager,
         ) as result:
@@ -70,16 +69,25 @@ def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None
         manager=manager,
     )
 
+    logger.info(
+        "IP address discovered: %s", event.address
+    ) if not was_already_discovered else None
+
     query = sql.select(IpAddress).where(IpAddress.address == event.address)
     ip_address = manager.session.execute(query).scalar_one()
 
     if event.domain is not None:
-        create_if_not_exist(
+        was_relation_already_known = create_if_not_exist(
             IpDomainRel,
             ip_id=ip_address.id,
             domain_id=event.domain.id,
             manager=manager,
         )
+        logger.info(
+            "Discovered relation between IP address %s and domain %s",
+            ip_address.address,
+            event.domain.name,
+        ) if not was_relation_already_known else None
 
     if not was_already_discovered:
         _process_ip_address(ip_address, manager=manager)

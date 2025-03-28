@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import message_broker, throttler
+from langdon import message_broker
 from langdon.command_executor import CommandData, shell_command_execution_context
 from langdon.events import IpAddressDiscovered
+from langdon.langdon_logging import logger
 from langdon.models import Domain
 from langdon.utils import create_if_not_exist
 
@@ -16,8 +17,6 @@ if TYPE_CHECKING:
 
 
 def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
-    throttler.wait_for_slot(f"throttle_{domain.name}")
-
     with shell_command_execution_context(
         CommandData(command="host", args=domain.name), manager=manager
     ) as result:
@@ -37,6 +36,8 @@ def handle_event(event: DomainDiscovered, *, manager: LangdonManager) -> None:
         manager=manager,
     ):
         return
+
+    logger.info("Domain discovered: %s", event.name)
 
     session = manager.session
     query = sql.select(Domain).filter(Domain.name == event.name)

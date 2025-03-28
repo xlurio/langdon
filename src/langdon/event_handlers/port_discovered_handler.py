@@ -13,12 +13,17 @@ from langdon.command_executor import (
     shell_command_execution_context,
 )
 from langdon.content_enumerators import google
-from langdon.events import TechnologyDiscovered, WebDirectoryDiscovered
+from langdon.events import (
+    DomainDiscovered,
+    TechnologyDiscovered,
+    WebDirectoryDiscovered,
+)
 from langdon.models import Domain, IpAddress, IpDomainRel, PortIpRel, UsedPort
 from langdon.utils import create_if_not_exist
 from sqlalchemy import sql
 from langdon_logging import logger
 import xml.etree.ElementTree as ET
+import urllib.parse
 
 if TYPE_CHECKING:
     from langdon.events import PortDiscovered
@@ -30,18 +35,24 @@ HTTP_PORTS = (80, 443)
 
 def _dispatch_web_directory_discovered(
     urls: list[str],
-    cleaned_host_name: str,
-    domain: Domain | None,
+    domain_name: Domain | None,
     ip_address: IpAddress | None,
     *,
     manager: LangdonManager,
 ) -> None:
     for url in urls:
-        cleaned_path = url.replace(cleaned_host_name, "", 1).strip()
+        url_parsed = urllib.parse.urlparse(url)
+        domain_name = url_parsed.netloc.split(":")[0]
+
+        message_broker.dispatch_event(DomainDiscovered(name=domain_name))
+        new_domain_query = sql.select(Domain).filter(Domain.name == domain_name)
+        new_domain = manager.session.execute(new_domain_query).scalar_one_or_none()
+
+        cleaned_path = url_parsed.path
         message_broker.dispatch_event(
             WebDirectoryDiscovered(
                 path=cleaned_path,
-                domain=domain,
+                domain=new_domain,
                 ip_address=ip_address,
                 manager=manager,
             )
@@ -136,13 +147,12 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
 def _process_other_ports(
     port_obj: UsedPort, event: PortDiscovered, *, manager: LangdonManager
 ) -> None:
-    throttler.wait_for_slot(f"throttle_{event.ip_address.address}")
-
     with tempfile.NamedTemporaryFile() as temp_file:
         with shell_command_execution_context(
             CommandData(
                 command="nmap",
-                args=f"-oX {temp_file.name} -sC -sV -p {port_obj.port} {event.ip_address}",
+                args=f"-oX {temp_file.name} -sC -sU -sV -p {port_obj.port} "
+                f"{event.ip_address}",
             ),
             manager=manager,
         ) as result:
@@ -173,13 +183,16 @@ def _process_found_port(
 
 
 def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
-    already_existed = create_if_not_exist(
+    was_already_known = create_if_not_exist(
         UsedPort,
         port=event.port,
         transport_layer_protocol=event.transport_layer_protocol,
         is_filtered=event.is_filtered,
         manager=manager,
     )
+
+    logger.info("Port discovered: %s", event.port) if not was_already_known else None
+
     query = (
         sql.select(UsedPort)
         .where(UsedPort.port == event.port)
@@ -188,12 +201,17 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
     )
     port_obj = manager.session.execute(query).scalar_one()
 
-    create_if_not_exist(
+    was_relation_already_known = create_if_not_exist(
         PortIpRel,
         port_id=port_obj.id,
         ip_address_id=event.ip_address.id,
         manager=manager,
     )
+    logger.info(
+        "Discovered relation between port %s and IP address %s",
+        port_obj.port,
+        event.ip_address.address,
+    ) if not was_relation_already_known else None
 
-    if not already_existed:
+    if not was_already_known:
         _process_found_port(port_obj, event, manager=manager)

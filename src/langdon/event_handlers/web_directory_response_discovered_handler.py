@@ -20,14 +20,14 @@ def _process_new_response(
     domain_query = sql.select(Domain).where(Domain.id == event.web_directory.domain_id)
     domain = manager.session.execute(domain_query).scalar_one()
     cleaned_directory_path = event.web_directory.path.lstrip("/")
-    web_directories_artifacts_dir = manager.config["web_directories_artifacts"]
 
     throttler.wait_for_slot(f"throttle_{domain.name}")
 
     with shell_command_execution_context(
         CommandData(
             command="webanalyze",
-            args=f"-worker 1 -host https://{domain.name}/{cleaned_directory_path} -output csv",
+            args=f"-worker 1 -host https://{domain.name}/{cleaned_directory_path} "
+            "-output csv",
         )
     ) as output:
         with tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file:
@@ -49,7 +49,7 @@ def _process_new_response(
                 )
 
     gowitness_destination_dir = os.path.join(
-        web_directories_artifacts_dir, domain.name, cleaned_directory_path
+        manager.config["web_directory_screenshots"], domain.name, cleaned_directory_path
     )
 
     with tempfile.NamedTemporaryFile("w+b", suffix=".html") as file:
@@ -75,6 +75,7 @@ def _process_new_response(
 def handle_event(
     event: WebDirectoryResponseDiscovered, *, manager: LangdonManager
 ) -> None:
+    # TODO add logs
     was_already_known = create_if_not_exist(
         WebDirectoryResponse,
         web_directory_id=event.web_directory.id,

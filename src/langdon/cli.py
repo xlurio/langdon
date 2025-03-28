@@ -2,7 +2,7 @@ import logging
 import pathlib
 import sys
 
-from langdon import assetimporter, initializer, langdon_logging
+from langdon import assetimporter, initializer, langdon_logging, recon_executor
 from langdon import langdon_argparser as argparser
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
@@ -33,6 +33,7 @@ def main():
         logger.addHandler(log_file_handler)
         return {
             "importcsv": assetimporter.import_from_csv(parsed_args, manager=manager),
+            "run": recon_executor.run_recon(parsed_args, manager=manager),
         }[parsed_args.module]
 
 

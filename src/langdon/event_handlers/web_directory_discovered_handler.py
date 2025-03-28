@@ -57,6 +57,7 @@ def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) 
 
 
 def handle_event(event: WebDirectoryDiscovered, *, manager: LangdonManager) -> None:
+    # TODO add logs
     was_already_known = create_if_not_exist(
         WebDirectory,
         path=event.path,

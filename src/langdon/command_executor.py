@@ -10,6 +10,7 @@ import pydantic
 from sqlalchemy import sql
 
 from langdon.exceptions import DuplicatedReconProcessException, LangdonException
+from langdon.langdon_logging import logger
 from langdon.models import ReconProcess
 
 if TYPE_CHECKING:
@@ -43,9 +44,13 @@ class CommandData(pydantic.BaseModel):
 
 def _try_to_execute_command(command: CommandData) -> str:
     try:
-        return subprocess.run(
+        logger.debug("Executing command: %s", command.shell_command_line)
+        result = subprocess.run(
             command.shell_command_line, capture_output=True, check=True
         ).stdout.decode()
+        logger.debug("Output:\n%s", result)
+
+        return result
     except subprocess.CalledProcessError as exception:
         cleaned_stderr = (
             exception.stderr.decode()

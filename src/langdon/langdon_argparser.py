@@ -39,9 +39,28 @@ def _make_init_parser(
         "init", help="Initialize Langdon reconnaissance project directory"
     )
     init_parser.add_argument(
-        "filefox_profile",
+        "--filefox_profile",
         type=pathlib.Path,
-        help="Path to the Firefox profile to be used for content discovery",
+        nargs=1,
+        help="Required. Path to the Firefox profile to be used for content discovery",
+    )
+    init_parser.add_argument(
+        "--resolvers_file",
+        type=pathlib.Path,
+        nargs=1,
+        help="Required. Path to the resolvers list file to be used for DNS discovery",
+    )
+    init_parser.add_argument(
+        "--dns_wordlist",
+        type=pathlib.Path,
+        nargs=1,
+        help="Required. Path to the wordlist file to be used for DNS discovery",
+    )
+    init_parser.add_argument(
+        "--content_wordlist",
+        type=pathlib.Path,
+        nargs=1,
+        help="Required. Path to the wordlist file to be used for content discovery",
     )
     init_parser.add_argument(
         "--directory",
@@ -69,6 +88,12 @@ def _make_importcsv_parser(
     )
 
 
+def _make_run_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    subparsers.add_parser("run", help="Run Langdon reconnaissance on the known assets")
+
+
 ModuleParserFactory = Callable[
     [argparse._SubParsersAction[argparse.ArgumentParser]], None
 ]
@@ -77,6 +102,7 @@ ModuleParserFactory = Callable[
 def _iter_module_parser_factories() -> Iterator[ModuleParserFactory]:
     yield _make_init_parser
     yield _make_importcsv_parser
+    yield _make_run_parser
 
 
 def parse_args() -> LangdonNamespace:

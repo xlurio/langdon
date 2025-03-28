@@ -20,3 +20,7 @@ For the langdon to work, it needs to have the `tor` daemon running. If you have 
 ```bash
 $ sudo systemctl start tor
 ```
+
+## Notes
+
+Recommended to run under `sudo` or `root` user due the use of `openvpn` and `systemctl`.
