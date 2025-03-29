@@ -8,6 +8,10 @@ import tomli_w
 from langdon.exceptions import LangdonException
 from langdon.output import OutputColor
 
+DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0"
+)
+
 
 class InitNamespace(Namespace):
     filefox_profile: pathlib.Path
@@ -40,6 +44,7 @@ def initialize(args: InitNamespace) -> None:
             "resolvers_file": resolvers_file,
             "dns_wordlist": dns_wordlist,
             "content_wordlist": content_wordlist,
+            "user_agent": DEFAULT_USER_AGENT,
         }
     }
 

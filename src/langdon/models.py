@@ -29,6 +29,9 @@ class Domain(SqlAlchemyModel):
     web_directories: orm.Mapped[list[WebDirectory]] = orm.relationship(
         back_populates="domain", cascade="all, delete-orphan"
     )
+    ip_relationships: orm.Mapped[list[IpDomainRel]] = orm.relationship(
+        back_populates="domain", cascade="all, delete-orphan"
+    )
 
 
 class AndroidApp(SqlAlchemyModel):
@@ -47,6 +50,12 @@ class IpAddress(SqlAlchemyModel):
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     address: orm.Mapped[str] = orm.mapped_column(unique=True)
     version: orm.Mapped[IpAddressVersionT]
+    domain_relationships: orm.Mapped[list[IpDomainRel]] = orm.relationship(
+        back_populates="ip_address", cascade="all, delete-orphan"
+    )
+    port_relationships: orm.Mapped[list[PortIpRel]] = orm.relationship(
+        back_populates="ip", cascade="all, delete-orphan"
+    )
 
 
 class IpDomainRel(SqlAlchemyModel):
@@ -59,6 +68,10 @@ class IpDomainRel(SqlAlchemyModel):
     domain_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_domains.id")
     )
+    ip_address: orm.Mapped[IpAddress] = orm.relationship(
+        back_populates="domain_relationships"
+    )
+    domain: orm.Mapped[Domain] = orm.relationship(back_populates="ip_relationships")
 
 
 class WebDirectory(SqlAlchemyModel):
@@ -80,6 +93,71 @@ class WebDirectory(SqlAlchemyModel):
     ip_id: orm.Mapped[int | None] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_ipaddresses.id"), nullable=True
     )
+    uses_ssl: orm.Mapped[bool]
+    responses: orm.Mapped[list[WebDirectoryResponse]] = orm.relationship(
+        back_populates="directory", cascade="all, delete-orphan"
+    )
+    technologies: orm.Mapped[list[WebDirTechRel]] = orm.relationship(
+        back_populates="directory", cascade="all, delete-orphan"
+    )
+    http_header_relationships: orm.Mapped[list[HttpHeader]] = orm.relationship(
+        back_populates="directory", cascade="all, delete-orphan"
+    )
+    http_cookie_relationships: orm.Mapped[list[HttpCookie]] = orm.relationship(
+        back_populates="directory", cascade="all, delete-orphan"
+    )
+
+
+class HttpHeader(SqlAlchemyModel):
+    __tablename__ = "langdon_httpheaders"
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    name: orm.Mapped[str] = orm.mapped_column(unique=True)
+    directory_relationships: orm.Mapped[list[DirHeaderRel]] = orm.relationship(
+        back_populates="header", cascade="all, delete-orphan"
+    )
+
+
+class DirHeaderRel(SqlAlchemyModel):
+    __tablename__ = "langdon_dirheaderrels"
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    header_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_httpheaders.id")
+    )
+    directory_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_webdirectories.id")
+    )
+    header: orm.Mapped[HttpHeader] = orm.relationship(back_populates="directory_relationships")
+    directory: orm.Mapped[WebDirectory] = orm.relationship(
+        back_populates="http_header_relationships"
+    )
+
+
+class HttpCookie(SqlAlchemyModel):
+    __tablename__ = "langdon_httpcookies"
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    name: orm.Mapped[str] = orm.mapped_column(unique=True)
+    directory_relationships: orm.Mapped[list[DirCookieRel]] = orm.relationship(
+        back_populates="cookie", cascade="all, delete-orphan"
+    )
+
+
+class DirCookieRel(SqlAlchemyModel):
+    __tablename__ = "langdon_dircookierels"
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    cookie_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_httpcookies.id")
+    )
+    directory_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_webdirectories.id")
+    )
+    cookie: orm.Mapped[HttpCookie] = orm.relationship(back_populates="directory_relationships")
+    directory: orm.Mapped[WebDirectory] = orm.relationship(
+        back_populates="http_cookie_relationships"
+    )
 
 
 class WebDirectoryResponse(SqlAlchemyModel):
@@ -91,11 +169,15 @@ class WebDirectoryResponse(SqlAlchemyModel):
     )
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
-    web_directory_id: orm.Mapped[int] = orm.mapped_column(
+    directory_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_webdirectories.id")
     )
     response_hash: orm.Mapped[str]
     response_path: orm.Mapped[str]
+    directory: orm.Mapped[WebDirectory] = orm.relationship(back_populates="responses")
+    screenshot: orm.Mapped[WebDirectoryResponseScreenshot] = orm.relationship(
+        back_populates="response", uselist=False, cascade="all, delete-orphan"
+    )
 
 
 class WebDirectoryResponseScreenshot(SqlAlchemyModel):
@@ -106,6 +188,9 @@ class WebDirectoryResponseScreenshot(SqlAlchemyModel):
         sqlalchemy.ForeignKey("langdon_webdirectoryresponses.id"), unique=True
     )
     screenshot_path: orm.Mapped[str]
+    response: orm.Mapped[WebDirectoryResponse] = orm.relationship(
+        back_populates="screenshot"
+    )
 
 
 TransportLayerProtocolT = Literal["tcp", "udp"]
@@ -126,6 +211,12 @@ class UsedPort(SqlAlchemyModel):
     port: orm.Mapped[int] = orm.mapped_column()
     transport_layer_protocol: orm.Mapped[TransportLayerProtocolT]
     is_filtered: orm.Mapped[bool]
+    ip_relationships: orm.Mapped[list[PortIpRel]] = orm.relationship(
+        back_populates="port", cascade="all, delete-orphan"
+    )
+    technology_relationships: orm.Mapped[list[PortTechRel]] = orm.relationship(
+        back_populates="port", cascade="all, delete-orphan"
+    )
 
 
 class PortIpRel(SqlAlchemyModel):
@@ -138,6 +229,8 @@ class PortIpRel(SqlAlchemyModel):
     ip_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_ipaddresses.id")
     )
+    port: orm.Mapped[UsedPort] = orm.relationship(back_populates="ip_relationships")
+    ip: orm.Mapped[IpAddress] = orm.relationship(back_populates="port_relationships")
 
 
 class Technology(SqlAlchemyModel):
@@ -150,6 +243,15 @@ class Technology(SqlAlchemyModel):
 
     name: orm.Mapped[str]
     version: orm.Mapped[str | None]
+    web_directory_relationships: orm.Mapped[list[WebDirTechRel]] = orm.relationship(
+        back_populates="technology", cascade="all, delete-orphan"
+    )
+    port_relationships: orm.Mapped[list[PortTechRel]] = orm.relationship(
+        back_populates="technology", cascade="all, delete-orphan"
+    )
+    vulnerabilities: orm.Mapped[list[Vulnerability]] = orm.relationship(
+        back_populates="technology", cascade="all, delete-orphan"
+    )
 
 
 class WebDirTechRel(SqlAlchemyModel):
@@ -161,6 +263,12 @@ class WebDirTechRel(SqlAlchemyModel):
     )
     technology_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_technologies.id")
+    )
+    directory: orm.Mapped[WebDirectory] = orm.relationship(
+        back_populates="technologies"
+    )
+    technology: orm.Mapped[Technology] = orm.relationship(
+        back_populates="web_directory_relationships"
     )
 
 
@@ -174,6 +282,12 @@ class PortTechRel(SqlAlchemyModel):
     technology_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_technologies.id")
     )
+    port: orm.Mapped[UsedPort] = orm.relationship(
+        back_populates="technology_relationships"
+    )
+    technology: orm.Mapped[Technology] = orm.relationship(
+        back_populates="port_relationships"
+    )
 
 
 class Vulnerability(SqlAlchemyModel):
@@ -184,4 +298,7 @@ class Vulnerability(SqlAlchemyModel):
     source: orm.Mapped[str]
     technology_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_technologies.id")
+    )
+    technology: orm.Mapped[Technology] = orm.relationship(
+        back_populates="vulnerabilities"
     )

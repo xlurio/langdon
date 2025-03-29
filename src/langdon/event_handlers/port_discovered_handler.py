@@ -61,6 +61,7 @@ def _dispatch_web_directory_discovered(
 
 
 def _enumerate_web_directories(
+    event: PortDiscovered,
     *,
     domain: Domain | None = None,
     ip_address: IpAddress | None = None,
@@ -93,28 +94,44 @@ def _enumerate_web_directories(
 
     throttler.wait_for_slot(f"throttle_{cleaned_host_name}")
 
-    with tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file:
-        with shell_command_execution_context(
-            CommandData(
-                command="wafw00f",
-                args=f"-f csv -o {temp_file} -p socks5://localhost:9050 --no-colors "
-                f"https://{cleaned_host_name}",
-            )
-        ) as output:
-            temp_file.seek(0)
-            reader = csv.DictReader(temp_file)
-            for row in reader:
-                message_broker.dispatch_event(
-                    TechnologyDiscovered(
-                        name=row["firewall"],
-                        version=None,
-                        domain=domain,
-                        ip_address=ip_address,
-                    )
+    with tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file, shell_command_execution_context(
+        CommandData(
+            command="wafw00f",
+            args=f"-f csv -o {temp_file} -p socks5://localhost:9050 --no-colors "
+            f"{'https' if event.port == 443 else 'http'}://{cleaned_host_name}",
+        )
+    ) as output:
+        temp_file.seek(0)
+        reader = csv.DictReader(temp_file)
+        for row in reader:
+            message_broker.dispatch_event(
+                TechnologyDiscovered(
+                    name=row["firewall"],
+                    version=None,
+                    domain=domain,
+                    ip_address=ip_address,
                 )
+            )
 
 
 def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> None:
+    def process_domains(domains):
+        for domain in domains:
+            message_broker.dispatch_event(
+                WebDirectoryDiscovered(
+                    path="/", domain=domain, manager=manager, uses_ssl=event.port == 443
+                )
+            )
+            _enumerate_web_directories(event, domain=domain, manager=manager)
+
+    def process_ip_address():
+        message_broker.dispatch_event(
+            WebDirectoryDiscovered(
+                path="/", ip_address=event.ip_address, manager=manager, uses_ssl=False
+            )
+        )
+        _enumerate_web_directories(event, ip_address=event.ip_address, manager=manager)
+
     domain_ids_subquery = (
         sql.select(IpDomainRel.domain_id)
         .where(IpDomainRel.ip_id == event.ip_address.id)
@@ -124,20 +141,9 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
     domains = manager.session.scalars(query)
 
     if domains:
-        for domain in manager.session.scalars(query):
-            message_broker.dispatch_event(
-                WebDirectoryDiscovered(path="/", domain=domain, manager=manager)
-            )
-            _enumerate_web_directories(domain=domain, manager=manager)
-
+        process_domains(domains)
     elif event.port == 80:
-        message_broker.dispatch_event(
-            WebDirectoryDiscovered(
-                path="/", ip_address=event.ip_address, manager=manager
-            )
-        )
-        _enumerate_web_directories(ip_address=event.ip_address, manager=manager)
-
+        process_ip_address()
     else:
         logger.error(
             f"No domain found for IP address {event.ip_address}. Unable to enumerate "
@@ -148,28 +154,27 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
 def _process_other_ports(
     port_obj: UsedPort, event: PortDiscovered, *, manager: LangdonManager
 ) -> None:
-    with tempfile.NamedTemporaryFile() as temp_file:
-        with shell_command_execution_context(
-            CommandData(
-                command="nmap",
-                args=f"-oX {temp_file.name} -sC -sU -sV -p {port_obj.port} "
-                f"{event.ip_address}",
-            ),
-            manager=manager,
-        ) as result:
-            root = ET.parse(temp_file.name).getroot()
-            technology = cast("str", root.find(".//service").get("product"))
-            technology_re = re.compile(r"([^\s]+)[^\d]*(\d+\.\d+)")
+    with tempfile.NamedTemporaryFile() as temp_file, shell_command_execution_context(
+        CommandData(
+            command="nmap",
+            args=f"-oX {temp_file.name} -sC -sU -sV -p {port_obj.port} "
+            f"{event.ip_address}",
+        ),
+        manager=manager,
+    ) as result:
+        root = ET.parse(temp_file.name).getroot()
+        technology = cast("str", root.find(".//service").get("product"))
+        technology_re = re.compile(r"([^\s]+)[^\d]*(\d+\.\d+)")
 
-            if re_match := technology_re.match(technology):
-                name, version = re_match.groups()
-            else:
-                name = technology
-                version = None
+        if re_match := technology_re.match(technology):
+            name, version = re_match.groups()
+        else:
+            name = technology
+            version = None
 
-            message_broker.dispatch_event(
-                TechnologyDiscovered(name=name, version=version, port=port_obj)
-            )
+        message_broker.dispatch_event(
+            TechnologyDiscovered(name=name, version=version, port=port_obj)
+        )
 
 
 def _process_found_port(

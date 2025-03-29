@@ -62,10 +62,23 @@ class WebDirectoryDiscovered(Event):
     path: str
     domain: Domain | None = None
     ip_address: IpAddress | None = None
+    uses_ssl: bool = False
+
+
+@register_event
+class HttpHeaderDiscovered(Event):
+    name: str
+    web_directory: WebDirectory
+
+
+@register_event
+class HttpCookieDiscovered(Event):
+    name: str
+    web_directory: WebDirectory
 
 
 @register_event
 class WebDirectoryResponseDiscovered(Event):
-    web_directory: WebDirectory
+    directory: WebDirectory
     response_hash: str
     response_path: Path

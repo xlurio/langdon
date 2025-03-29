@@ -10,4 +10,5 @@ ConfigurationKeyT = Literal[
     "resolvers_file",
     "dns_wordlist",
     "content_wordlist",
+    "user_agent",
 ]

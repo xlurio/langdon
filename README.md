@@ -25,6 +25,7 @@ CLI for network application reconnaissance
 - Tor ~= 0.4.8.14
 - wafw00f ~= v2.3.1
 - webanalyze ~= v0.4.1
+- whatweb ~= 0.5.5
 
 
 ## Notes

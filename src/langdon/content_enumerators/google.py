@@ -41,8 +41,7 @@ def _make_webdriver(*, manager: LangdonManager) -> webdriver.WebDriver:
     wd_options.set_preference("network.proxy.socks", "localhost")
     wd_options.set_preference("network.proxy.socks_port", 9050)
     wd_options.set_preference(
-        "general.useragent.override",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0",
+        "general.useragent.override", manager.config["user_agent"]
     )
 
     return webdriver.WebDriver(options=wd_options)
@@ -106,47 +105,38 @@ def _solve_captcha(driver: webdriver.WebDriver) -> None:
 
 def enumerate_directories(domain: str, *, manager: LangdonManager) -> Iterator[str]:
     with _make_webdriver(manager=manager) as driver:
-        throttler.wait_for_slot(THROTTLING_QUEUE)
-        driver.get(f"https://google.com/search?q=site:{domain}")
-        time.sleep(5)
-
-        if driver.current_url.startswith("https://www.google.com/sorry"):
-            _solve_captcha(driver)
-
+        _initialize_search(driver, domain)
         while True:
-            current_url = driver.current_url
-
-            for element in driver.find_elements(By.XPATH, "//h3"):
-                result_url = element.find_element(By.XPATH, "..").get_attribute("href")
-
-                if (result_url is None) or (
-                    ("*" not in domain) and (domain not in result_url)
-                ):
-                    continue
-
-                yield result_url
-
-            try:
-                if (
-                    wait.WebDriverWait(driver, 60)
-                    .until(ec.visibility_of_element_located((By.ID, "pnnext")))
-                    .get_attribute("aria-disabled")
-                    == "true"
-                ):
-                    break
-            except wait.TimeoutException:
+            yield from _extract_results(driver, domain)
+            if not _navigate_to_next_page(driver):
                 break
 
-            throttler.wait_for_slot(THROTTLING_QUEUE)
 
-            try:
-                driver.execute_script(
-                    "arguments[0].click();",
-                    wait.WebDriverWait(driver, 60).until(
-                        ec.element_to_be_clickable((By.ID, "pnnext"))
-                    ),
-                )
-            except wait.TimeoutException:
-                break
+def _initialize_search(driver: webdriver.WebDriver, domain: str) -> None:
+    throttler.wait_for_slot(THROTTLING_QUEUE)
+    driver.get(f"https://google.com/search?q=site:{domain}")
+    time.sleep(5)
+    if driver.current_url.startswith("https://www.google.com/sorry"):
+        _solve_captcha(driver)
 
-            wait.WebDriverWait(driver, 60).until(ec.url_changes(current_url))
+
+def _extract_results(driver: webdriver.WebDriver, domain: str) -> Iterator[str]:
+    for element in driver.find_elements(By.XPATH, "//h3"):
+        result_url = element.find_element(By.XPATH, "..").get_attribute("href")
+        if result_url and (("*" in domain) or (domain in result_url)):
+            yield result_url
+
+
+def _navigate_to_next_page(driver: webdriver.WebDriver) -> bool:
+    try:
+        next_button = wait.WebDriverWait(driver, 60).until(
+            ec.visibility_of_element_located((By.ID, "pnnext"))
+        )
+        if next_button.get_attribute("aria-disabled") == "true":
+            return False
+        throttler.wait_for_slot(THROTTLING_QUEUE)
+        driver.execute_script("arguments[0].click();", next_button)
+        wait.WebDriverWait(driver, 60).until(ec.url_changes(driver.current_url))
+        return True
+    except wait.TimeoutException:
+        return False

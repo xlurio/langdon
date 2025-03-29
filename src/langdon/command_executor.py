@@ -78,7 +78,8 @@ def shell_command_execution_context(
     if session.execute(query).scalar_one_or_none() is not None:
         raise DuplicatedReconProcessException(
             f"Recon process '{command.command}' with args '{command.args}' was already "
-            "successfully executed"
+            "successfully executed",
+            command=command.shell_command_line,
         )
 
     yield _try_to_execute_command(command)
@@ -120,7 +121,8 @@ def function_execution_context(
         raise DuplicatedReconProcessException(
             f"Recon process '{func_data.function.__name__}' with args "
             f"'{func_data.args_kwargs_str}' was already "
-            "successfully executed"
+            "successfully executed",
+            command=[func_data.function.__name__, func_data.args_kwargs_str],
         )
 
     yield func_data.function(*func_data.cleaned_args, **func_data.cleaned_kwargs)
@@ -132,3 +134,17 @@ def function_execution_context(
         )
     )
     session.commit()
+
+
+@contextlib.contextmanager
+def suppress_duplicated_recon_process() -> Iterator[None]:
+    """
+    Context manager to suppress DuplicatedReconProcessException.
+    This is useful for functions that are called multiple times with the same arguments.
+    """
+    try:
+        yield
+    except DuplicatedReconProcessException as exception:
+        logger.debug(
+            "Duplicated recon process: %s", exception.command, exc_info=exception
+        )

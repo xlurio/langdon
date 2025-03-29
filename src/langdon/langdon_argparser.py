@@ -110,6 +110,7 @@ def _make_graph_parser(
         help="Path to the output file. Default is graph.png",
     )
 
+
 ModuleParserFactory = Callable[
     ["argparse._SubParsersAction[argparse.ArgumentParser]"], None
 ]

@@ -48,15 +48,14 @@ def _process_nmap_output(output: str, *, ip_address: IpAddress) -> None:
 
 
 def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
-    with NamedTemporaryFile("w+b", suffix=".xml") as temp_file:
-        with shell_command_execution_context(
-            CommandData(
-                "nmap", f"-Pn -sS -sU -oX '{temp_file.name}' '{ip_address.address}'"
-            ),
-            manager=manager,
-        ) as result:
-            temp_file.seek(0)
-            _process_nmap_output(temp_file.read(), ip_address=ip_address)
+    with NamedTemporaryFile("w+b", suffix=".xml") as temp_file, shell_command_execution_context(
+        CommandData(
+            "nmap", f"-Pn -sS -sU -oX '{temp_file.name}' '{ip_address.address}'"
+        ),
+        manager=manager,
+    ) as result:
+        temp_file.seek(0)
+        _process_nmap_output(temp_file.read(), ip_address=ip_address)
 
 
 def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None:

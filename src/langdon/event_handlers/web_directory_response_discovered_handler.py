@@ -22,36 +22,35 @@ if TYPE_CHECKING:
 def _process_new_response(
     event: WebDirectoryResponseDiscovered, *, manager: LangdonManager
 ) -> None:
-    domain_query = sql.select(Domain).where(Domain.id == event.web_directory.domain_id)
+    domain_query = sql.select(Domain).where(Domain.id == event.directory.domain_id)
     domain = manager.session.execute(domain_query).scalar_one()
-    cleaned_directory_path = event.web_directory.path.lstrip("/")
+    cleaned_directory_path = event.directory.path.lstrip("/")
 
     throttler.wait_for_slot(f"throttle_{domain.name}")
 
     with shell_command_execution_context(
         CommandData(
             command="webanalyze",
-            args=f"-worker 1 -host https://{domain.name}/{cleaned_directory_path} "
+            args=f"-worker 1 -host {'https' if event.directory.uses_ssl else 'http'}://{domain.name}/{cleaned_directory_path} "
             "-output csv",
         )
-    ) as output:
-        with tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file:
-            temp_file.write(output)
-            temp_file.flush()
-            temp_file.seek(0)
+    ) as output, tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file:
+        temp_file.write(output)
+        temp_file.flush()
+        temp_file.seek(0)
 
-            reader = csv.DictReader(temp_file)
-            raw_version = str(row["Version"]).strip()
-            cleaned_version = raw_version if raw_version else None
+        reader = csv.DictReader(temp_file)
+        raw_version = str(row["Version"]).strip()
+        cleaned_version = raw_version if raw_version else None
 
-            for row in reader:
-                message_broker.dispatch_event(
-                    TechnologyDiscovered(
-                        name=row["App"],
-                        version=cleaned_version,
-                        directory=event.web_directory,
-                    )
+        for row in reader:
+            message_broker.dispatch_event(
+                TechnologyDiscovered(
+                    name=row["App"],
+                    version=cleaned_version,
+                    directory=event.directory,
                 )
+            )
 
     gowitness_destination_dir = os.path.join(
         manager.config["web_directory_screenshots"], domain.name, cleaned_directory_path
@@ -71,7 +70,7 @@ def _process_new_response(
                 latest_jpeg = max(jpeg_files, key=os.path.getmtime)
                 create_if_not_exist(
                     WebDirectoryResponseScreenshot,
-                    web_directory_response_id=event.web_directory.id,
+                    web_directory_response_id=event.directory.id,
                     defaults={"screenshot_path": pathlib.Path(latest_jpeg)},
                     manager=manager,
                 )
@@ -83,7 +82,7 @@ def handle_event(
     # TODO add logs
     was_already_known = create_if_not_exist(
         WebDirectoryResponse,
-        web_directory_id=event.web_directory.id,
+        directory_id=event.directory.id,
         response_hash=event.response_hash,
         defaults={"response_path": event.response_path},
         manager=manager,

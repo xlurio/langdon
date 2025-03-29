@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 from langdon.event_handlers import (
     domain_discovered_handler,
+    http_header_dicovered_handler,
     ip_address_discovered_handler,
     port_discovered_handler,
     technology_discovered_handler,
@@ -14,6 +15,7 @@ from langdon.event_handlers import (
 from langdon.events import (
     DomainDiscovered,
     Event,
+    HttpHeaderDiscovered,
     IpAddressDiscovered,
     PortDiscovered,
     TechnologyDiscovered,
@@ -33,6 +35,7 @@ EVENT_HANDLERS_MAPPING = {
     PortDiscovered: port_discovered_handler.handle_event,
     WebDirectoryDiscovered: web_directory_discovered_handler.handle_event,
     WebDirectoryResponseDiscovered: web_directory_response_discovered_handler.handle_event,
+    HttpHeaderDiscovered: http_header_dicovered_handler.handle_event,
 }
 
 
