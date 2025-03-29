@@ -25,7 +25,7 @@ def _make_global_arguments_parser(
     )
     main_parser.add_argument(
         "--openvpn",
-        "-o",
+        "-O",
         type=pathlib.Path,
         help="OpenVPN client configuration file for VPN tunneling during execution. "
         "Recommended in case you don't have a VPN already enabled",
@@ -42,26 +42,30 @@ def _make_init_parser(
     )
     init_parser.add_argument(
         "--filefox_profile",
+        "-fp",
         type=pathlib.Path,
-        nargs=1,
+        required=True,
         help="Required. Path to the Firefox profile to be used for content discovery",
     )
     init_parser.add_argument(
         "--resolvers_file",
+        "-r",
         type=pathlib.Path,
-        nargs=1,
+        required=True,
         help="Required. Path to the resolvers list file to be used for DNS discovery",
     )
     init_parser.add_argument(
         "--dns_wordlist",
+        "-dw",
         type=pathlib.Path,
-        nargs=1,
+        required=True,
         help="Required. Path to the wordlist file to be used for DNS discovery",
     )
     init_parser.add_argument(
         "--content_wordlist",
+        "-cw",
         type=pathlib.Path,
-        nargs=1,
+        required=True,
         help="Required. Path to the wordlist file to be used for content discovery",
     )
     init_parser.add_argument(
@@ -106,7 +110,7 @@ def _make_graph_parser(
         "--output",
         "-o",
         type=pathlib.Path,
-        default=pathlib.Path("graph.png"),
+        default=pathlib.Path("langdon-graph.png"),
         help="Path to the output file. Default is graph.png",
     )
 

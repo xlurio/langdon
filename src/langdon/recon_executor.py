@@ -33,7 +33,7 @@ def _download_android_binaries(*, manager: LangdonManager) -> None:
             suppress_duplicated_recon_process(),
             shell_command_execution_context(
                 CommandData(
-                    command="apkeep", args=f"{android_app_id} {android_bin_dir}"
+                    command="apkeep", args=f"--app {android_app_id} {android_bin_dir}"
                 ),
                 manager=manager,
             ),

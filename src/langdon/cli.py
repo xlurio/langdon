@@ -17,7 +17,7 @@ from langdon.langdon_manager import LangdonManager
 from langdon.output import OutputColor
 
 
-def main():
+def run():
     parsed_args = argparser.parse_args()
     is_initializing = parsed_args.module == "init"
 
@@ -34,17 +34,21 @@ def main():
         return initializer.initialize(parsed_args)
 
     with LangdonManager() as manager:
-        log_file_handler = logging.FileHandler(manager.config["log_file"], errors=True)
+        log_file_handler = logging.FileHandler(manager.config["log_file"])
         log_file_handler.setLevel(logging.NOTSET)
         log_file_handler.setFormatter(langdon_logging.log_formatter)
 
         logger.addHandler(log_file_handler)
         return {
-            "importcsv": assetimporter.import_from_csv(parsed_args, manager=manager),
-            "run": recon_executor.run_recon(parsed_args, manager=manager),
-            "graph": graph_generator.generate_graph(parsed_args, manager=manager),
-        }[parsed_args.module]
+            "importcsv": lambda: assetimporter.import_from_csv(
+                parsed_args, manager=manager
+            ),
+            "run": lambda: recon_executor.run_recon(parsed_args, manager=manager),
+            "graph": lambda: graph_generator.generate_graph(
+                parsed_args, manager=manager
+            ),
+        }[parsed_args.module]()
 
 
 if __name__ == "__main__":
-    main()
+    run()

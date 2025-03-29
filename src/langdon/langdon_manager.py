@@ -31,14 +31,17 @@ def register_event(event_cls: type[T]) -> type[T]:
 
 class LangdonManager(contextlib.AbstractContextManager):
     def __init__(self) -> None:
-        self.__config = tomllib.load("pyproject.toml")
+        with open("pyproject.toml", "rb") as pyproject_file:
+            self.__config = tomllib.load(pyproject_file)["tool"]["langdon"]
+
+        db_path = self.__config["database"]
         self.__engine = sqlalchemy.create_engine(
-            self.__config["tool.langdon"]["database"]
+            f"sqlite:///{db_path}",
         )
 
     def __enter__(self) -> LangdonManager:
         SqlAlchemyModel.metadata.create_all(self.__engine, checkfirst=True)
-        self.__session = orm.Session()
+        self.__session = orm.Session(self.__engine)
 
         return self
 
@@ -65,7 +68,7 @@ class LangdonManager(contextlib.AbstractContextManager):
         self.__session.close()
 
         if exc_type is None:
-            return
+            return None
 
         if exc_type == LangdonException:
             print(f"{OutputColor.RED}Error: {exc_value!s}{OutputColor.RESET}")
