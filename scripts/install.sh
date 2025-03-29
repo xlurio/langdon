@@ -1,4 +1,6 @@
 # /bin/bash
+set -ex
+
 cd "$HOME"
 
 # APT Repositories (Firefox)
@@ -28,7 +30,8 @@ echo 'eval "$(pyenv init - bash)"' >> ~/.bashrc
 exec "$SHELL"
 apt update -y; apt install -y build-essential libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev curl git \
-    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev \
+    nmap
 
 # Python
 pyenv install 3
@@ -73,11 +76,6 @@ cd bin
 chmod +x massdns
 echo 'export PATH="$PATH:$HOME/massdns/bin"' >> ~/.bashrc
 cd "$HOME"
-
-# Nmap
-wget https://nmap.org/dist/nmap-7.95-3.x86_64.rpm
-alien nmap-7.95-3.x86_64.rpm
-dpkg --install nmap-7.95-3.x86_64.deb
 
 # Webanalyze
 mkdir webanalyze
