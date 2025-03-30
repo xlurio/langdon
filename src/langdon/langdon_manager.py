@@ -19,14 +19,7 @@ if TYPE_CHECKING:
     from langdon.langdon_t import ConfigurationKeyT
 
 
-_events_mapping = {}
-
-
 T = TypeVar("T", bound="Event")
-
-
-def register_event(event_cls: type[T]) -> type[T]:
-    _events_mapping[event_cls.__name__] = event_cls
 
 
 class LangdonManager(contextlib.AbstractContextManager):
@@ -50,11 +43,6 @@ class LangdonManager(contextlib.AbstractContextManager):
         return self.__session
 
     @property
-    def get_event_by_name(self, name: str) -> type[Event]:
-        """Utility to avoid circular imports."""
-        return _events_mapping[name]
-
-    @property
     def config(self) -> dict[ConfigurationKeyT, str]:
         return self.__config
 
@@ -73,5 +61,9 @@ class LangdonManager(contextlib.AbstractContextManager):
         if exc_type == LangdonException:
             print(f"{OutputColor.RED}Error: {exc_value!s}{OutputColor.RESET}")
             sys.exit(1)
+
+        elif exc_type == KeyboardInterrupt:
+            print(f"Exiting...")
+            sys.exit(0)
 
         raise exc_value.with_traceback(traceback)

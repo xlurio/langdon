@@ -45,7 +45,7 @@ def _import_domains(raw_dataframe: pd.DataFrame, manager: LangdonManager) -> Non
     for domain in raw_dataframe[raw_dataframe["asset_type"] == "URL"]["identifier"]:
         was_already_known = create_if_not_exist(
             Domain,
-            defaults={"was_known": False},
+            defaults={"was_known": True},
             manager=manager,
             name=domain,
         )

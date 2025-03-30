@@ -1,23 +1,17 @@
-from __future__ import annotations
-
 import contextlib
 import shlex
 import shutil
 import subprocess
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from typing import Any, Generic, TypeVar
 
 import pydantic
 from sqlalchemy import sql
 
 from langdon.exceptions import DuplicatedReconProcessException, LangdonException
 from langdon.langdon_logging import logger
+from langdon.langdon_manager import LangdonManager
 from langdon.models import ReconProcess
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Mapping, Sequence
-
-    from langdon.langdon_manager import LangdonManager
-
 
 T = TypeVar("T")
 
@@ -42,11 +36,13 @@ class CommandData(pydantic.BaseModel):
         return cleaned_command
 
 
-def _try_to_execute_command(command: CommandData) -> str:
+def _try_to_execute_command(
+    command: CommandData, *, ignore_exit_code: bool = False
+) -> str:
     try:
         logger.debug("Executing command: %s", command.shell_command_line)
         result = subprocess.run(
-            command.shell_command_line, capture_output=True, check=True
+            command.shell_command_line, capture_output=True, check=not ignore_exit_code
         ).stdout.decode()
         logger.debug("Output:\n%s", result)
 
@@ -66,7 +62,7 @@ def _try_to_execute_command(command: CommandData) -> str:
 
 @contextlib.contextmanager
 def shell_command_execution_context(
-    command: CommandData, *, manager: LangdonManager
+    command: CommandData, *, manager: LangdonManager, ignore_exit_code: bool = False
 ) -> Iterator[str]:
     session = manager.session
     query = (
@@ -82,7 +78,7 @@ def shell_command_execution_context(
             command=command.shell_command_line,
         )
 
-    yield _try_to_execute_command(command)
+    yield _try_to_execute_command(command, ignore_exit_code=ignore_exit_code)
 
     session.add(ReconProcess(name=command.command, args=command.args))
     session.commit()
@@ -145,6 +141,4 @@ def suppress_duplicated_recon_process() -> Iterator[None]:
     try:
         yield
     except DuplicatedReconProcessException as exception:
-        logger.debug(
-            "Duplicated recon process: %s", exception.command, exc_info=exception
-        )
+        logger.debug("Duplicated recon process: %s", exception.command)

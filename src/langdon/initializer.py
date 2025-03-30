@@ -48,10 +48,12 @@ def initialize(args: InitNamespace) -> None:
     resolvers_file = args.resolvers_file.absolute()
     dns_wordlist = args.dns_wordlist.absolute()
     content_wordlist = args.content_wordlist.absolute()
+    cache_file = cleaned_directory / ".langdon.cache.json"
 
     toml_config = {
         "tool": {
             "langdon": {
+                "cache_file": str(cache_file),
                 "database": str(database_path),
                 "web_directories_artifacts": str(web_directories_artifacts),
                 "web_directory_screenshots": str(web_directory_screenshots),

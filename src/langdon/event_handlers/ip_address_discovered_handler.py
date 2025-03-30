@@ -7,7 +7,11 @@ from typing import TYPE_CHECKING
 from sqlalchemy import sql
 
 from langdon import message_broker
-from langdon.command_executor import CommandData, shell_command_execution_context
+from langdon.command_executor import (
+    CommandData,
+    shell_command_execution_context,
+    suppress_duplicated_recon_process,
+)
 from langdon.events import PortDiscovered
 from langdon.langdon_logging import logger
 from langdon.models import IpAddress, IpDomainRel
@@ -25,17 +29,21 @@ def _detect_ip_version(ip_address: str) -> IpAddressVersionT:
     return "ipv4"
 
 
-def _process_nmap_output(output: str, *, ip_address: IpAddress) -> None:
+def _process_nmap_output(
+    output: str, *, ip_address: IpAddress, manager: LangdonManager
+) -> None:
     root = ET.fromstring(output)
     ports = root.findall(".//port")
 
     for port in ports:
-        if port.attrib["state"] == "closed":
+        state_data = port.find("state")
+
+        if state_data.attrib["state"] == "closed":
             continue
 
         transport_layer_protocol = port.attrib["protocol"]
         port_number = int(port.attrib["portid"])
-        is_filtered = port.attrib["state"] == "filtered"
+        is_filtered = state_data.attrib["state"] == "filtered"
 
         message_broker.dispatch_event(
             PortDiscovered(
@@ -43,19 +51,27 @@ def _process_nmap_output(output: str, *, ip_address: IpAddress) -> None:
                 transport_layer_protocol=transport_layer_protocol,
                 is_filtered=is_filtered,
                 ip_address=ip_address,
-            )
+            ),
+            manager=manager,
         )
 
 
 def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
-    with NamedTemporaryFile("w+b", suffix=".xml") as temp_file, shell_command_execution_context(
-        CommandData(
-            "nmap", f"-Pn -sS -sU -oX '{temp_file.name}' '{ip_address.address}'"
+    with (
+        NamedTemporaryFile("w+b", suffix=".xml") as temp_file,
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(
+            CommandData(
+                command="nmap",
+                args=f"-Pn -sS -sU -vv -oX '{temp_file.name}' '{ip_address.address}'",
+            ),
+            manager=manager,
         ),
-        manager=manager,
-    ) as result:
+    ):
         temp_file.seek(0)
-        _process_nmap_output(temp_file.read(), ip_address=ip_address)
+        file_content = temp_file.read()
+        logger.debug("Nmap XML:\n%s", file_content)
+        _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
 
 
 def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None:
@@ -88,5 +104,4 @@ def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None
             event.domain.name,
         ) if not was_relation_already_known else None
 
-    if not was_already_discovered:
-        _process_ip_address(ip_address, manager=manager)
+    _process_ip_address(ip_address, manager=manager)

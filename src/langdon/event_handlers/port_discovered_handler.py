@@ -15,6 +15,7 @@ from langdon.command_executor import (
     FunctionData,
     function_execution_context,
     shell_command_execution_context,
+    suppress_duplicated_recon_process,
 )
 from langdon.content_enumerators import google
 from langdon.events import (
@@ -35,6 +36,7 @@ HTTP_PORTS = (80, 443)
 
 
 def _dispatch_web_directory_discovered(
+    event: PortDiscovered,
     urls: list[str],
     domain_name: Domain | None,
     ip_address: IpAddress | None,
@@ -55,8 +57,9 @@ def _dispatch_web_directory_discovered(
                 path=cleaned_path,
                 domain=new_domain,
                 ip_address=ip_address,
-                manager=manager,
-            )
+                uses_ssl=event.port == 443,
+            ),
+            manager=manager,
         )
 
 
@@ -69,38 +72,49 @@ def _enumerate_web_directories(
 ) -> None:
     cleaned_host_name = domain.name if domain else ip_address.address
 
-    with shell_command_execution_context(
-        CommandData(
-            command="gau",
-            args=f"--blacklist png,jpg,gif,ttf,woff --fp --json {cleaned_host_name}",
-        ),
-        manager=manager,
-    ) as output:
+    with (
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(
+            CommandData(
+                command="gau",
+                args=f"--blacklist png,jpg,gif,ttf,woff --fp --json {cleaned_host_name}",
+            ),
+            manager=manager,
+        ) as output,
+    ):
         _dispatch_web_directory_discovered(
-            output.splitlines(), cleaned_host_name, domain, ip_address, manager=manager
+            event, output.splitlines(), domain, ip_address, manager=manager
         )
 
-    with function_execution_context(
-        FunctionData(
-            function=google.enumerate_directories,
-            args=[cleaned_host_name],
-            kwargs={"manager": manager},
-        ),
-        manager=manager,
-    ) as output:
+    with (
+        suppress_duplicated_recon_process(),
+        function_execution_context(
+            FunctionData(
+                function=google.enumerate_directories,
+                args=[cleaned_host_name],
+                kwargs={"manager": manager},
+            ),
+            manager=manager,
+        ) as output,
+    ):
         _dispatch_web_directory_discovered(
             output, cleaned_host_name, domain, ip_address, manager=manager
         )
 
-    throttler.wait_for_slot(f"throttle_{cleaned_host_name}")
+    throttler.wait_for_slot(f"throttle_{cleaned_host_name}", manager=manager)
 
-    with tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file, shell_command_execution_context(
-        CommandData(
-            command="wafw00f",
-            args=f"-f csv -o {temp_file} -p socks5://localhost:9050 --no-colors "
-            f"{'https' if event.port == 443 else 'http'}://{cleaned_host_name}",
-        )
-    ) as output:
+    with (
+        tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file,
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(
+            CommandData(
+                command="wafw00f",
+                args=f"-f csv -o {temp_file} -p socks5://localhost:9050 --no-colors "
+                f"{'https' if event.port == 443 else 'http'}://{cleaned_host_name}",
+            ),
+            manager=manager,
+        ) as output,
+    ):
         temp_file.seek(0)
         reader = csv.DictReader(temp_file)
         for row in reader:
@@ -110,7 +124,8 @@ def _enumerate_web_directories(
                     version=None,
                     domain=domain,
                     ip_address=ip_address,
-                )
+                ),
+                manager=manager,
             )
 
 
@@ -120,7 +135,8 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
             message_broker.dispatch_event(
                 WebDirectoryDiscovered(
                     path="/", domain=domain, manager=manager, uses_ssl=event.port == 443
-                )
+                ),
+                manager=manager,
             )
             _enumerate_web_directories(event, domain=domain, manager=manager)
 
@@ -128,14 +144,13 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
         message_broker.dispatch_event(
             WebDirectoryDiscovered(
                 path="/", ip_address=event.ip_address, manager=manager, uses_ssl=False
-            )
+            ),
+            manager=manager,
         )
         _enumerate_web_directories(event, ip_address=event.ip_address, manager=manager)
 
-    domain_ids_subquery = (
-        sql.select(IpDomainRel.domain_id)
-        .where(IpDomainRel.ip_id == event.ip_address.id)
-        .subquery()
+    domain_ids_subquery = sql.select(IpDomainRel.domain_id).where(
+        IpDomainRel.ip_id == event.ip_address.id
     )
     query = sql.select(Domain).where(Domain.id.in_(domain_ids_subquery))
     domains = manager.session.scalars(query)
@@ -154,27 +169,38 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
 def _process_other_ports(
     port_obj: UsedPort, event: PortDiscovered, *, manager: LangdonManager
 ) -> None:
-    with tempfile.NamedTemporaryFile() as temp_file, shell_command_execution_context(
-        CommandData(
-            command="nmap",
-            args=f"-oX {temp_file.name} -sC -sU -sV -p {port_obj.port} "
-            f"{event.ip_address}",
+    with (
+        tempfile.NamedTemporaryFile() as temp_file,
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(
+            CommandData(
+                command="nmap",
+                args=f"-oX {temp_file.name} -sC -sU -sV -p {port_obj.port} "
+                f"{event.ip_address}",
+            ),
+            manager=manager,
         ),
-        manager=manager,
-    ) as result:
+    ):
+        temp_file.seek(0)
+        logger.debug("Nmap XML: %s", temp_file.read())
+        temp_file.seek(0)
+
         root = ET.parse(temp_file.name).getroot()
-        technology = cast("str", root.find(".//service").get("product"))
-        technology_re = re.compile(r"([^\s]+)[^\d]*(\d+\.\d+)")
 
-        if re_match := technology_re.match(technology):
-            name, version = re_match.groups()
-        else:
-            name = technology
-            version = None
+        if service_data := root.find(".//service"):
+            technology = cast("str", service_data.get("product"))
+            technology_re = re.compile(r"([^\s]+)[^\d]*(\d+\.\d+)")
 
-        message_broker.dispatch_event(
-            TechnologyDiscovered(name=name, version=version, port=port_obj)
-        )
+            if re_match := technology_re.match(technology):
+                name, version = re_match.groups()
+            else:
+                name = technology
+                version = None
+
+            message_broker.dispatch_event(
+                TechnologyDiscovered(name=name, version=version, port=port_obj),
+                manager=manager,
+            )
 
 
 def _process_found_port(
@@ -210,7 +236,7 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
     was_relation_already_known = create_if_not_exist(
         PortIpRel,
         port_id=port_obj.id,
-        ip_address_id=event.ip_address.id,
+        ip_id=event.ip_address.id,
         manager=manager,
     )
     logger.info(
@@ -219,5 +245,4 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
         event.ip_address.address,
     ) if not was_relation_already_known else None
 
-    if not was_already_known:
-        _process_found_port(port_obj, event, manager=manager)
+    _process_found_port(port_obj, event, manager=manager)

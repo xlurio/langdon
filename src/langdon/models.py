@@ -25,7 +25,7 @@ class Domain(SqlAlchemyModel):
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     name: orm.Mapped[str] = orm.mapped_column(unique=True)
-    was_known: orm.Mapped[bool]
+    was_known: orm.Mapped[bool] = orm.mapped_column(default=False)
     web_directories: orm.Mapped[list[WebDirectory]] = orm.relationship(  # Fixed type hint
         back_populates="domain", cascade="all, delete-orphan"
     )
@@ -78,7 +78,7 @@ class WebDirectory(SqlAlchemyModel):
     __tablename__ = "langdon_webdirectories"
     __table_args__ = (
         sqlalchemy.UniqueConstraint(
-            "path", "domain_id", "ip_id", name="_path_domain_ip_uc"
+            "path", "domain_id", "ip_id", "uses_ssl", name="_path_domain_ip_uc"
         ),
     )
 

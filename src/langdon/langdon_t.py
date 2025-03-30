@@ -1,14 +1,15 @@
 from typing import Literal
 
 ConfigurationKeyT = Literal[
-    "filefox_profile",
-    "directory",
-    "web_directories_artifacts",
-    "log_file",
-    "web_directory_screenshots",
-    "downloaded_apks_dir",
-    "resolvers_file",
-    "dns_wordlist",
+    "cache_file",
     "content_wordlist",
+    "directory",
+    "dns_wordlist",
+    "downloaded_apks_dir",
+    "filefox_profile",
+    "log_file",
+    "resolvers_file",
     "user_agent",
+    "web_directories_artifacts",
+    "web_directory_screenshots",
 ]

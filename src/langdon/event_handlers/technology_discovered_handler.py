@@ -6,8 +6,13 @@ from typing import TYPE_CHECKING
 from sqlalchemy import sql
 
 from langdon import message_broker
-from langdon.command_executor import CommandData, shell_command_execution_context
+from langdon.command_executor import (
+    CommandData,
+    shell_command_execution_context,
+    suppress_duplicated_recon_process,
+)
 from langdon.events import VulnerabilityDiscovered
+from langdon.langdon_logging import logger
 from langdon.models import (
     PortTechRel,
     Technology,
@@ -26,26 +31,43 @@ def _enumerate_vulnerabilities(
     if technology.version is None:
         return
 
-    with shell_command_execution_context(
-        CommandData(
-            command="searchsploit",
-            args=f"{technology.name} {technology.version} --www --json",
-        ),
-        manager=manager,
-    ) as output:
+    with (
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(
+            CommandData(
+                command="searchsploit",
+                args=f"{technology.name} {technology.version} --www --json",
+            ),
+            manager=manager,
+        ) as output,
+    ):
         output_parsed = json.loads(output)
 
         for entry in output_parsed["RESULTS_EXPLOIT"]:
             message_broker.dispatch_event(
                 VulnerabilityDiscovered(
                     name=entry["Title"], source=entry["URL"], technology=technology
-                )
+                ),
+                manager=manager,
             )
 
 
 def handle_event(event: TechnologyDiscovered, *, manager: LangdonManager) -> None:
-    # TODO add logs
+    already_existed = _handle_technology_creation(event, manager)
+    technology = _fetch_technology(event, manager)
 
+    if event.directory is not None:
+        _handle_directory_relation(event, technology, manager)
+
+    if event.port is not None:
+        _handle_port_relation(event, technology, manager)
+
+    _enumerate_vulnerabilities(technology, manager=manager)
+
+
+def _handle_technology_creation(
+    event: TechnologyDiscovered, manager: LangdonManager
+) -> bool:
     already_existed = create_if_not_exist(
         Technology,
         name=event.name,
@@ -53,29 +75,56 @@ def handle_event(event: TechnologyDiscovered, *, manager: LangdonManager) -> Non
         manager=manager,
     )
 
+    if not already_existed:
+        logger.info(
+            "Technology discovered: %s%s", event.name, f" {event.version}" or ""
+        )
+    return already_existed
+
+
+def _fetch_technology(
+    event: TechnologyDiscovered, manager: LangdonManager
+) -> Technology:
     session = manager.session
     query = (
         sql.select(Technology)
         .where(Technology.name == event.name)
         .where(Technology.version == event.version)
     )
-    technology = session.execute(query).scalar_one()
+    return session.execute(query).scalar_one()
 
-    if event.directory is not None:
-        create_if_not_exist(
-            WebDirTechRel,
-            directory_id=event.directory.id,
-            technology_id=technology.id,
-            manager=manager,
+
+def _handle_directory_relation(
+    event: TechnologyDiscovered, technology: Technology, manager: LangdonManager
+) -> None:
+    was_dir_rel_already_known = create_if_not_exist(
+        WebDirTechRel,
+        directory_id=event.directory.id,
+        technology_id=technology.id,
+        manager=manager,
+    )
+
+    if not was_dir_rel_already_known:
+        logger.info(
+            "Discovered relation between directory %s and technology %s",
+            event.directory.path,
+            technology.name,
         )
 
-    if event.port is not None:
-        create_if_not_exist(
-            PortTechRel,
-            port_id=event.port.id,
-            technology_id=technology.id,
-            manager=manager,
-        )
 
-    if not already_existed:
-        _enumerate_vulnerabilities(technology, manager=manager)
+def _handle_port_relation(
+    event: TechnologyDiscovered, technology: Technology, manager: LangdonManager
+) -> None:
+    was_port_rel_already_known = create_if_not_exist(
+        PortTechRel,
+        port_id=event.port.id,
+        technology_id=technology.id,
+        manager=manager,
+    )
+
+    if not was_port_rel_already_known:
+        logger.info(
+            "Discovered relation between port %s and technology %s",
+            event.port.port,
+            technology.name,
+        )

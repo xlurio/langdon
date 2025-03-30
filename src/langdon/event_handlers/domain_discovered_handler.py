@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING
 from sqlalchemy import sql
 
 from langdon import message_broker
-from langdon.command_executor import CommandData, shell_command_execution_context
+from langdon.command_executor import (
+    CommandData,
+    shell_command_execution_context,
+    suppress_duplicated_recon_process,
+)
 from langdon.events import IpAddressDiscovered
 from langdon.langdon_logging import logger
 from langdon.models import Domain
@@ -17,9 +21,12 @@ if TYPE_CHECKING:
 
 
 def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
-    with shell_command_execution_context(
-        CommandData(command="host", args=domain.name), manager=manager
-    ) as result:
+    with (
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(
+            CommandData(command="host", args=domain.name), manager=manager
+        ) as result,
+    ):
         for line in result.splitlines():
             if "has address" in line:
                 ip_address = line.split()[-1]
@@ -30,14 +37,14 @@ def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
 
 
 def handle_event(event: DomainDiscovered, *, manager: LangdonManager) -> None:
-    if not create_if_not_exist(
+    was_already_known = create_if_not_exist(
         Domain,
         name=event.name,
         manager=manager,
-    ):
-        return
+    )
 
-    logger.info("Domain discovered: %s", event.name)
+    if not was_already_known:
+        logger.info("Domain discovered: %s", event.name)
 
     session = manager.session
     query = sql.select(Domain).filter(Domain.name == event.name)

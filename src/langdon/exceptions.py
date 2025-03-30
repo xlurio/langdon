@@ -5,3 +5,6 @@ class DuplicatedReconProcessException(Exception):
 
 
 class LangdonException(Exception): ...
+
+
+class LangdonProgrammingError(Exception): ...

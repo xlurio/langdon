@@ -56,7 +56,7 @@ def generate_graph(
     add_port_tech_relationships(dot, manager)
 
     dot.render(
-        parsed_args.output,
+        parsed_args.output.with_suffix(""),
         format=parsed_args.output.suffix.replace(".", ""),
         cleanup=True,
     )

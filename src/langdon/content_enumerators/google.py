@@ -47,7 +47,7 @@ def _make_webdriver(*, manager: LangdonManager) -> webdriver.WebDriver:
     return webdriver.WebDriver(options=wd_options)
 
 
-def _solve_captcha(driver: webdriver.WebDriver) -> None:
+def _solve_captcha(driver: webdriver.WebDriver, *, manager: LangdonManager) -> None:
     try:
         current_url = driver.current_url
         recaptcha_iframe = wait.WebDriverWait(driver, 60).until(
@@ -76,7 +76,7 @@ def _solve_captcha(driver: webdriver.WebDriver) -> None:
 
         with tempfile.NamedTemporaryFile("w+b", suffix=".wav") as wav_file:
             with tempfile.NamedTemporaryFile("w+b", suffix=".mp3") as mp3_file:
-                throttler.wait_for_slot(THROTTLING_QUEUE)
+                throttler.wait_for_slot(THROTTLING_QUEUE, manager=manager)
                 mp3_file.write(requests.get(audio_src).content)
                 audio_segment = cast(
                     "pydub.AudioSegment", pydub.AudioSegment.from_mp3(mp3_file.name)
@@ -94,7 +94,7 @@ def _solve_captcha(driver: webdriver.WebDriver) -> None:
             wait.WebDriverWait(driver, 60).until(
                 ec.presence_of_element_located((By.ID, "audio-response"))
             ).send_keys(challenge_response)
-            throttler.wait_for_slot(THROTTLING_QUEUE)
+            throttler.wait_for_slot(THROTTLING_QUEUE, manager=manager)
             wait.WebDriverWait(driver, 60).until(
                 ec.element_to_be_clickable((By.ID, "recaptcha-verify-button"))
             ).click()
@@ -105,19 +105,19 @@ def _solve_captcha(driver: webdriver.WebDriver) -> None:
 
 def enumerate_directories(domain: str, *, manager: LangdonManager) -> Iterator[str]:
     with _make_webdriver(manager=manager) as driver:
-        _initialize_search(driver, domain)
+        _initialize_search(driver, domain, manager=manager)
         while True:
             yield from _extract_results(driver, domain)
-            if not _navigate_to_next_page(driver):
+            if not _navigate_to_next_page(driver, manager=manager):
                 break
 
 
-def _initialize_search(driver: webdriver.WebDriver, domain: str) -> None:
-    throttler.wait_for_slot(THROTTLING_QUEUE)
+def _initialize_search(driver: webdriver.WebDriver, domain: str, *, manager: LangdonManager) -> None:
+    throttler.wait_for_slot(THROTTLING_QUEUE, manager=manager)
     driver.get(f"https://google.com/search?q=site:{domain}")
     time.sleep(5)
     if driver.current_url.startswith("https://www.google.com/sorry"):
-        _solve_captcha(driver)
+        _solve_captcha(driver, manager=manager)
 
 
 def _extract_results(driver: webdriver.WebDriver, domain: str) -> Iterator[str]:
@@ -127,14 +127,14 @@ def _extract_results(driver: webdriver.WebDriver, domain: str) -> Iterator[str]:
             yield result_url
 
 
-def _navigate_to_next_page(driver: webdriver.WebDriver) -> bool:
+def _navigate_to_next_page(driver: webdriver.WebDriver, *, manager: LangdonManager) -> bool:
     try:
         next_button = wait.WebDriverWait(driver, 60).until(
             ec.visibility_of_element_located((By.ID, "pnnext"))
         )
         if next_button.get_attribute("aria-disabled") == "true":
             return False
-        throttler.wait_for_slot(THROTTLING_QUEUE)
+        throttler.wait_for_slot(THROTTLING_QUEUE, manager=manager)
         driver.execute_script("arguments[0].click();", next_button)
         wait.WebDriverWait(driver, 60).until(ec.url_changes(driver.current_url))
         return True
