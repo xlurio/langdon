@@ -20,7 +20,8 @@ Pin-Priority: 1000
 # APT Packages
 apt update -y ; apt install -y tor firefox build-essential libssl-dev \
     zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev \
-    xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev dnsutils nmap
+    xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev dnsutils nmap \
+    ffmpeg
 
 # PyEnv
 curl -fsSL https://pyenv.run | bash
@@ -108,11 +109,9 @@ cd $HOME
 
 # Langdon
 git clone https://github.com/xlurio/langdon.git
-cd langdon
 pip install --user poetry
-rm poetry.lock
-poetry install
-cd "$HOME"
+poetry install -C "$HOME/langdon"
+rm "$HOME/.local/bin/httpx" # Causes conflict with the go version
 
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile

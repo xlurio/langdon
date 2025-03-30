@@ -9,6 +9,7 @@ CLI for network application reconnaissance
 - assetfinder ~= v0.1.1
 - dnsgen ~= v1.0.4
 - exploitdb ~= 20241126
+- ffmpeg ~= 7.1.1-1+b1
 - gau ~= 2.2.4
 - go ~= 1.24.1
 - gobuster ~= v3.6.0
