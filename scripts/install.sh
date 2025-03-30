@@ -54,8 +54,8 @@ cargo install apkeep
 # Go
 wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
 rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
-echo 'export PATH="$PATH:/usr/local/go/bin:'$HOME'/go/bin"' >> ~/.bashrc
-echo 'export PATH="$PATH:/usr/local/go/bin:'$HOME'/go/bin"' >> ~/.profile
+echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.bashrc
+echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.profile
 exec "$SHELL"
 
 # Go Packages
@@ -67,6 +67,9 @@ go install github.com/projectdiscovery/httpx/cmd/httpx@latest
 go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 go install github.com/owasp-amass/amass/v4/...@master
 CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
+echo 'export PATH="$PATH:'$HOME'/go/bin"' >> ~/.bashrc
+echo 'export PATH="$PATH:'$HOME'/go/bin"' >> ~/.profile
+exec "$SHELL"
 
 # ExploitDB
 git clone https://gitlab.com/exploit-database/exploitdb.git
