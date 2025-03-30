@@ -110,6 +110,7 @@ cd $HOME
 git clone https://github.com/xlurio/langdon.git
 cd langdon
 pip install --user poetry
+rm poetry.lock
 poetry install
 cd "$HOME"
 
