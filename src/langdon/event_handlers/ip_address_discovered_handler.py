@@ -63,7 +63,8 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
         shell_command_execution_context(
             CommandData(
                 command="nmap",
-                args=f"-Pn -sS -sU -vv -oX '{temp_file.name}' '{ip_address.address}'",
+                args=f"--host-timeout 1h -Pn -sS -sU -vv -oX '{temp_file.name}' "
+                f"'{ip_address.address}'",
             ),
             manager=manager,
         ),

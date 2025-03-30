@@ -66,7 +66,7 @@ def _process_amass_for_domain(domain: str) -> None:
         LangdonManager() as manager,
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
-            CommandData(command="amass", args=f"enum -d {domain}"),
+            CommandData(command="amass", args=f"enum -timeout 60 -d {domain}"),
             manager=manager,
         ) as output,
     ):

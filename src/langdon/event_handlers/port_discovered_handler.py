@@ -175,8 +175,8 @@ def _process_other_ports(
         shell_command_execution_context(
             CommandData(
                 command="nmap",
-                args=f"-oX {temp_file.name} -sC -sU -sV -p {port_obj.port} "
-                f"{event.ip_address}",
+                args=f"--host-timeout 1h -oX {temp_file.name} -sC -sU -sV -p "
+                f"{port_obj.port} {event.ip_address}",
             ),
             manager=manager,
         ),
