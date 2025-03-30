@@ -38,6 +38,7 @@ pyenv global 3
 exec "$SHELL"
 
 # Python packages
+pip install --upgrade pip
 python -m pip install --user dnsgen wafw00f
 
 # Ruff
