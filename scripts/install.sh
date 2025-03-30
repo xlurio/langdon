@@ -41,12 +41,12 @@ exec "$SHELL"
 pip install --upgrade pip
 python -m pip install --user dnsgen wafw00f
 
-# Ruff
+# Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
 exec "$SHELL"
 
-# Ruff packages
+# Rust packages
 cargo install apkeep
 
 # Go
