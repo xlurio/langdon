@@ -97,6 +97,6 @@ exec "$SHELL"
 # Langdon
 git clone https://github.com/xlurio/langdon.git
 cd langdon
-pipx install poetry
+pip install poetry
 poetry install
 cd "$HOME"
