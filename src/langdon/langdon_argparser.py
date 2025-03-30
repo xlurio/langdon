@@ -41,13 +41,6 @@ def _make_init_parser(
         "init", help="Initialize Langdon reconnaissance project directory"
     )
     init_parser.add_argument(
-        "--filefox_profile",
-        "-fp",
-        type=pathlib.Path,
-        required=True,
-        help="Required. Path to the Firefox profile to be used for content discovery",
-    )
-    init_parser.add_argument(
         "--resolvers_file",
         "-r",
         type=pathlib.Path,

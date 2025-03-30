@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import concurrent.futures as CF
-import os
 import re
 import shlex
 import shutil
@@ -105,14 +103,6 @@ def _process_amass_line_for_ips(
 
 
 def _process_amass_for_domains(domains: set[str], manager: LangdonManager) -> None:
-    # with CF.ProcessPoolExecutor(os.cpu_count() // 2) as executor:
-    #     futures = {
-    #         executor.submit(_process_amass_for_domain, domain) for domain in domains
-    #     }
-
-    #     for future in CF.as_completed(futures):
-    #         future.result()
-
     for domain in domains:
         _process_amass_for_domain(domain)
 

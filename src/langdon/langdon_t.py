@@ -6,7 +6,7 @@ ConfigurationKeyT = Literal[
     "directory",
     "dns_wordlist",
     "downloaded_apks_dir",
-    "filefox_profile",
+    "firefox_profile",
     "log_file",
     "resolvers_file",
     "user_agent",

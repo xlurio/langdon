@@ -36,7 +36,10 @@ class GoogleRecognizerType(sr.Recognizer):
 def _make_webdriver(*, manager: LangdonManager) -> webdriver.WebDriver:
     wd_options = options.Options()
     wd_options.add_argument("--headless")
-    wd_options.set_preference("profile", manager.config["filefox_profile"])
+
+    if firefox_profile := manager.config.get("firefox_profile"):
+        wd_options.set_preference("profile", firefox_profile)
+
     wd_options.set_preference("network.proxy.type", 1)
     wd_options.set_preference("network.proxy.socks", "localhost")
     wd_options.set_preference("network.proxy.socks_port", 9050)
@@ -112,7 +115,9 @@ def enumerate_directories(domain: str, *, manager: LangdonManager) -> Iterator[s
                 break
 
 
-def _initialize_search(driver: webdriver.WebDriver, domain: str, *, manager: LangdonManager) -> None:
+def _initialize_search(
+    driver: webdriver.WebDriver, domain: str, *, manager: LangdonManager
+) -> None:
     throttler.wait_for_slot(THROTTLING_QUEUE, manager=manager)
     driver.get(f"https://google.com/search?q=site:{domain}")
     time.sleep(5)
@@ -127,7 +132,9 @@ def _extract_results(driver: webdriver.WebDriver, domain: str) -> Iterator[str]:
             yield result_url
 
 
-def _navigate_to_next_page(driver: webdriver.WebDriver, *, manager: LangdonManager) -> bool:
+def _navigate_to_next_page(
+    driver: webdriver.WebDriver, *, manager: LangdonManager
+) -> bool:
     try:
         next_button = wait.WebDriverWait(driver, 60).until(
             ec.visibility_of_element_located((By.ID, "pnnext"))

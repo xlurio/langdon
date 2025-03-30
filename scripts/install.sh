@@ -97,6 +97,20 @@ exec "$SHELL"
 # Langdon
 git clone https://github.com/xlurio/langdon.git
 cd langdon
-pip install poetry
+pip install --user poetry
 poetry install
 cd "$HOME"
+
+# Create recoinassaince directory
+mkdir -p "$HOME/recon"
+
+# Supervisor
+pip install --user supervisor
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+exec "$SHELL"
+echo_supervisord_conf > /etc/supervisord.conf
+echo '
+[program:langdon]
+command=python -m langdon run
+directory='$HOME'/recon
+' >> /etc/supervisord.conf
