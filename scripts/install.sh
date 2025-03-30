@@ -45,6 +45,7 @@ python -m pip install --user dnsgen wafw00f
 # Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.profile
 exec "$SHELL"
 
 # Rust packages
@@ -54,6 +55,7 @@ cargo install apkeep
 wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
 rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
 echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.bashrc
+echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.profile
 exec "$SHELL"
 
 # Go Packages
@@ -70,6 +72,7 @@ CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
 # ExploitDB
 git clone https://gitlab.com/exploit-database/exploitdb.git
 echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.bashrc
+echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.profile
 exec "$SHELL"
 
 # MassDNS
@@ -79,6 +82,7 @@ make
 cd bin
 chmod +x massdns
 echo 'export PATH="$PATH:$HOME/massdns/bin"' >> ~/.bashrc
+echo 'export PATH="$PATH:$HOME/massdns/bin"' >> ~/.profile
 cd "$HOME"
 exec "$SHELL"
 
@@ -89,6 +93,7 @@ wget https://github.com/rverton/webanalyze/releases/download/v0.4.1/webanalyze_L
 tar -xvf webanalyze_Linux_x86_64.tar.gz
 chmod +x webanalyze
 echo 'export PATH="$PATH:$HOME/webanalyze"' >> ~/.bashrc
+echo 'export PATH="$PATH:$HOME/webanalyze"' >> ~/.profile
 cd "$HOME"
 exec "$SHELL"
 
@@ -97,6 +102,7 @@ git clone https://github.com/urbanadventurer/WhatWeb.git
 cd WhatWeb
 chmod +x whatweb
 echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.bashrc
+echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.profile
 cd "$HOME"
 exec "$SHELL"
 
@@ -124,7 +130,6 @@ poetry run -P "$HOME/langdon" \
     --dns_wordlist "$HOME/jhaddix/all.txt" \
     --content_wordlist "$HOME/SecLists/Discovery/Web-Content/raft-large-directories-lowercase.txt" \
     --directory "$HOME/recon"
-touch "$HOME/recon/start.sh"
 echo '#!/bin/bash
 
 set -xe
@@ -137,7 +142,7 @@ fi
 poetry run -P "$HOME/langdon" langdon -- importcsv "$1"
 
 supervisord -c /etc/supervisord.conf
-' >> "$HOME/recon/start.sh"
+' > "$HOME/recon/start.sh"
 chmod 754 "$HOME/recon/start.sh"
 
 # Supervisor
@@ -146,6 +151,6 @@ exec "$SHELL"
 echo_supervisord_conf > /etc/supervisord.conf
 echo '
 [program:langdon]
-command=poetry run -P "$HOME/langdon" langdon -- run
+command=poetry run -P "$HOME/langdon" langdon -- --loglevel DEBUG run
 directory='$HOME'/recon
 ' >> /etc/supervisord.conf

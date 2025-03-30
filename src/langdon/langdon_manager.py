@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 import sqlalchemy
 from sqlalchemy import orm
-
+from langdon.langdon_logging import logger
 from langdon.exceptions import LangdonException
 from langdon.models import SqlAlchemyModel
 from langdon.output import OutputColor
@@ -59,6 +59,7 @@ class LangdonManager(contextlib.AbstractContextManager):
             return None
 
         if exc_type == LangdonException:
+            logger.debug("Error while running Langdon", exc_info=True)
             print(f"{OutputColor.RED}Error: {exc_value!s}{OutputColor.RESET}")
             sys.exit(1)
 
