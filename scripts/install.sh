@@ -119,19 +119,22 @@ exec $SHELL
 
 # Create recoinassaince directory
 mkdir -p "$HOME/recon"
-langdon init --resolvers_file "$HOME/massdns/lists/resolvers.txt" \
-    --dns_wordlist "$HOME/jhaddix/all.txt"
-    --content_wordlist "$HOME/SecLists/Discovery/Web-Content/raft-large-directories-lowercase.txt"
+poetry run -P "$HOME/langdon" \
+    langdon -- init --resolvers_file "$HOME/massdns/lists/resolvers.txt" \
+    --dns_wordlist "$HOME/jhaddix/all.txt" \
+    --content_wordlist "$HOME/SecLists/Discovery/Web-Content/raft-large-directories-lowercase.txt" \
     --directory "$HOME/recon"
 touch "$HOME/recon/start.sh"
 echo '#!/bin/bash
+
+set -xe
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <scope_csv_file>"
     exit 1
 fi
 
-langdon importcsv "$1"
+poetry run -P "$HOME/langdon" langdon -- importcsv "$1"
 
 supervisord -c /etc/supervisord.conf
 ' >> "$HOME/recon/start.sh"
@@ -143,6 +146,6 @@ exec "$SHELL"
 echo_supervisord_conf > /etc/supervisord.conf
 echo '
 [program:langdon]
-command=python -m langdon run
+command=poetry run -P "$HOME/langdon" langdon -- run
 directory='$HOME'/recon
 ' >> /etc/supervisord.conf
