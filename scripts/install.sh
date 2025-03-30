@@ -114,6 +114,10 @@ rm poetry.lock
 poetry install
 cd "$HOME"
 
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
+exec $SHELL
+
 # Create recoinassaince directory
 mkdir -p "$HOME/recon"
 langdon init --resolvers_file "$HOME/massdns/lists/resolvers.txt" \
@@ -136,7 +140,6 @@ chmod 754 "$HOME/recon/start.sh"
 
 # Supervisor
 pip install --user supervisor
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 exec "$SHELL"
 echo_supervisord_conf > /etc/supervisord.conf
 echo '
