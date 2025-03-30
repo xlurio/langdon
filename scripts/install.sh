@@ -94,6 +94,13 @@ echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.bashrc
 cd "$HOME"
 exec "$SHELL"
 
+# Wordlists
+git clone https://github.com/danielmiessler/SecLists.git
+mkdir jhaddix
+cd jhaddix
+wget https://gist.github.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
+cd $HOME
+
 # Langdon
 git clone https://github.com/xlurio/langdon.git
 cd langdon
@@ -103,6 +110,23 @@ cd "$HOME"
 
 # Create recoinassaince directory
 mkdir -p "$HOME/recon"
+langdon init --resolvers_file "$HOME/massdns/lists/resolvers.txt" \
+    --dns_wordlist "$HOME/jhaddix/all.txt"
+    --content_wordlist "$HOME/SecLists/Discovery/Web-Content/raft-large-directories-lowercase.txt"
+    --directory "$HOME/recon"
+touch "$HOME/recon/start.sh"
+echo '#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <scope_csv_file>"
+    exit 1
+fi
+
+langdon importcsv "$1"
+
+supervisord -c /etc/supervisord.conf
+' >> "$HOME/recon/start.sh"
+chmod 754 "$HOME/recon/start.sh"
 
 # Supervisor
 pip install --user supervisor
