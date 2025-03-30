@@ -65,7 +65,8 @@ go install \
     github.com/OJ/gobuster/v3@latest \
     github.com/sensepost/gowitness@latest \
     github.com/projectdiscovery/httpx/cmd/httpx@latest \
-    github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+    github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest \
+    github.com/owasp-amass/amass/v4/...@master
 
 CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
 
@@ -151,6 +152,5 @@ exec "$SHELL"
 echo_supervisord_conf > /etc/supervisord.conf
 echo '
 [program:langdon]
-command=poetry run -P "$HOME/langdon" langdon -- --loglevel DEBUG run
-directory='$HOME'/recon
+command=poetry run --project="'$HOME'/langdon" --directory="'$HOME'/recon" langdon -- --loglevel DEBUG run
 ' >> /etc/supervisord.conf

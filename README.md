@@ -5,6 +5,7 @@ CLI for network application reconnaissance
 
 ## Requirements
 
+- amass ~= v4.2.0
 - apkeep ~= 0.17.0
 - assetfinder ~= v0.1.1
 - dnsgen ~= v1.0.4
