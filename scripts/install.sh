@@ -39,6 +39,7 @@ python -m pip install --user dnsgen wafw00f
 # Ruff
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+exec "$SHELL"
 
 # Ruff packages
 cargo install apkeep
@@ -47,7 +48,7 @@ cargo install apkeep
 wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
 rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
 echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.bashrc
-go version
+exec "$SHELL"
 
 # Go Packages
 go install \
@@ -63,6 +64,7 @@ CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
 # ExploitDB
 git clone https://gitlab.com/exploit-database/exploitdb.git
 echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.bashrc
+exec "$SHELL"
 
 # MassDNS
 git clone https://github.com/blechschmidt/massdns.git
@@ -72,6 +74,7 @@ cd bin
 chmod +x massdns
 echo 'export PATH="$PATH:$HOME/massdns/bin"' >> ~/.bashrc
 cd "$HOME"
+exec "$SHELL"
 
 # Webanalyze
 mkdir webanalyze
@@ -81,6 +84,7 @@ tar -xvf webanalyze_Linux_x86_64.tar.gz
 chmod +x webanalyze
 echo 'export PATH="$PATH:$HOME/webanalyze"' >> ~/.bashrc
 cd "$HOME"
+exec "$SHELL"
 
 # WhatWeb
 git clone https://github.com/urbanadventurer/WhatWeb.git
@@ -88,6 +92,7 @@ cd WhatWeb
 chmod +x whatweb
 echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.bashrc
 cd "$HOME"
+exec "$SHELL"
 
 # Langdon
 git clone https://github.com/xlurio/langdon.git
