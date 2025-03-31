@@ -91,9 +91,7 @@ class LangdonManager(contextlib.AbstractContextManager):
             print(f"Exiting...")
             sys.exit(0)
 
-        if threading.current_thread() != threading.main_thread():
-            logger.exception(
-                "Error while running Langdon in child thread",
-            )
-
+        logger.exception(
+            "Error while running Langdon in child thread",
+        )
         raise exc_value.with_traceback(traceback)

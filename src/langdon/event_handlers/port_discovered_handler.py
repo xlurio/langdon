@@ -24,7 +24,7 @@ from langdon.events import (
     WebDirectoryDiscovered,
 )
 from langdon.langdon_logging import logger
-from langdon.models import Domain, IpAddress, IpDomainRel, PortIpRel, UsedPort
+from langdon.models import Domain, IpAddress, IpDomainRel, UsedPort
 from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
@@ -219,11 +219,14 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
         UsedPort,
         port=event.port,
         transport_layer_protocol=event.transport_layer_protocol,
-        is_filtered=event.is_filtered,
+        ip_address_id=event.ip_address.id,
+        defaults={"is_filtered": event.is_filtered},
         manager=manager,
     )
 
-    logger.info("Port discovered: %s", event.port) if not was_already_known else None
+    logger.info(
+        "Port discovered at IP %s: %s", event.ip_address.address, event.port
+    ) if not was_already_known else None
 
     query = (
         sql.select(UsedPort)
@@ -232,17 +235,5 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
         .where(UsedPort.is_filtered == event.is_filtered)
     )
     port_obj = manager.session.execute(query).scalar_one()
-
-    was_relation_already_known = create_if_not_exist(
-        PortIpRel,
-        port_id=port_obj.id,
-        ip_id=event.ip_address.id,
-        manager=manager,
-    )
-    logger.info(
-        "Discovered relation between port %s and IP address %s",
-        port_obj.port,
-        event.ip_address.address,
-    ) if not was_relation_already_known else None
 
     _process_found_port(port_obj, event, manager=manager)

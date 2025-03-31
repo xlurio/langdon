@@ -55,8 +55,8 @@ class IpAddress(SqlAlchemyModel):
     domain_relationships: orm.Mapped[list[IpDomainRel]] = orm.relationship(
         back_populates="ip_address", cascade="all, delete-orphan"
     )
-    port_relationships: orm.Mapped[list[PortIpRel]] = orm.relationship(
-        back_populates="ip", cascade="all, delete-orphan"
+    ports: orm.Mapped[list[UsedPort]] = orm.relationship(
+        back_populates="ip_address", cascade="all, delete-orphan"
     )
 
 
@@ -208,7 +208,7 @@ class UsedPort(SqlAlchemyModel):
         sqlalchemy.UniqueConstraint(
             "port",
             "transport_layer_protocol",
-            "is_filtered",
+            "ip_address_id",
             name="_port_tlp_is_filtered_uc",
         ),
     )
@@ -217,26 +217,13 @@ class UsedPort(SqlAlchemyModel):
     port: orm.Mapped[int] = orm.mapped_column()
     transport_layer_protocol: orm.Mapped[TransportLayerProtocolT]
     is_filtered: orm.Mapped[bool]
-    ip_relationships: orm.Mapped[list[PortIpRel]] = orm.relationship(
-        back_populates="port", cascade="all, delete-orphan"
+    ip_address_id: orm.Mapped[int] = orm.mapped_column(
+        sqlalchemy.ForeignKey("langdon_ipaddresses.id")
     )
+    ip_address = orm.Mapped[IpAddress] = orm.relationship(back_populates="ports")
     technology_relationships: orm.Mapped[list[PortTechRel]] = orm.relationship(
         back_populates="port", cascade="all, delete-orphan"
     )
-
-
-class PortIpRel(SqlAlchemyModel):
-    __tablename__ = "langdon_portiprels"
-
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
-    port_id: orm.Mapped[int] = orm.mapped_column(
-        sqlalchemy.ForeignKey("langdon_usedports.id")
-    )
-    ip_id: orm.Mapped[int] = orm.mapped_column(
-        sqlalchemy.ForeignKey("langdon_ipaddresses.id")
-    )
-    port: orm.Mapped[UsedPort] = orm.relationship(back_populates="ip_relationships")
-    ip: orm.Mapped[IpAddress] = orm.relationship(back_populates="port_relationships")
 
 
 class Technology(SqlAlchemyModel):

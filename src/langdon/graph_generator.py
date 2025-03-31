@@ -13,7 +13,6 @@ from langdon.models import (
     HttpHeader,
     IpAddress,
     IpDomainRel,
-    PortIpRel,
     PortTechRel,
     Technology,
     UsedPort,
@@ -49,7 +48,6 @@ def generate_graph(
     add_http_cookies(dot, manager)
     add_dir_cookie_relationships(dot, manager)
     add_used_ports(dot, manager)
-    add_ip_port_relationships(dot, manager)
     add_technologies(dot, manager)
     add_vulnerabilities(dot, manager)
     add_web_dir_tech_relationships(dot, manager)
@@ -95,7 +93,9 @@ def add_http_headers(dot: graphviz.Digraph, manager: LangdonManager) -> None:
         dot.node(http_header.name, shape="parallelogram")
 
 
-def add_dir_header_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+def add_dir_header_relationships(
+    dot: graphviz.Digraph, manager: LangdonManager
+) -> None:
     dir_header_rel_query = (
         sql.select(DirHeaderRel).join(DirHeaderRel.directory).join(DirHeaderRel.header)
     )
@@ -109,7 +109,9 @@ def add_http_cookies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
         dot.node(http_cookie.name, shape="trapezium")
 
 
-def add_dir_cookie_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+def add_dir_cookie_relationships(
+    dot: graphviz.Digraph, manager: LangdonManager
+) -> None:
     dir_cookie_rel_query = (
         sql.select(DirHeaderRel).join(DirHeaderRel.directory).join(DirHeaderRel.header)
     )
@@ -118,15 +120,12 @@ def add_dir_cookie_relationships(dot: graphviz.Digraph, manager: LangdonManager)
 
 
 def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
-    used_ports_query = sql.select(UsedPort).join(WebDirectory.domain)
+    used_ports_query = sql.select(UsedPort).join(WebDirectory.domain).join(
+        UsedPort.ip_address
+    )
     for used_port in manager.session.scalars(used_ports_query):
         dot.node(str(used_port.port), shape="diamond")
-
-
-def add_ip_port_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
-    ip_port_rel_query = sql.select(PortIpRel).join(PortIpRel.ip).join(PortIpRel.port)
-    for ip_port_rel in manager.session.scalars(ip_port_rel_query):
-        dot.edge(str(ip_port_rel.port.port), ip_port_rel.ip.address)
+        dot.edge(str(used_port.port), used_port.ip_address.address)
 
 
 def add_technologies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -145,7 +144,9 @@ def add_vulnerabilities(dot: graphviz.Digraph, manager: LangdonManager) -> None:
         )
 
 
-def add_web_dir_tech_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+def add_web_dir_tech_relationships(
+    dot: graphviz.Digraph, manager: LangdonManager
+) -> None:
     web_dir_tech_rel_query = (
         sql.select(WebDirTechRel)
         .join(WebDirTechRel.directory)
