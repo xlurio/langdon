@@ -103,8 +103,7 @@ def _process_amass_line_for_ips(
 
 
 def _process_amass_for_domains(domains: set[str], manager: LangdonManager) -> None:
-    for domain in domains:
-        _process_amass_for_domain(domain)
+    manager.process_executor.map(_process_amass_for_domain, domains)
 
 
 def _process_subfinder(temp_file_name: str, manager: LangdonManager) -> None:

@@ -13,6 +13,7 @@ from langdon.command_executor import (
     suppress_duplicated_recon_process,
 )
 from langdon.events import PortDiscovered
+from langdon.exceptions import AlreadyInChildProcess
 from langdon.langdon_logging import logger
 from langdon.models import IpAddress, IpDomainRel
 from langdon.utils import create_if_not_exist
@@ -91,11 +92,15 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
         logger.debug("Nmap XML:\n%s", file_content)
         _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
 
-    manager.process_executor.submit(
-        _enumerate_udp_ports,
-        ip_address,
-        manager=manager,
-    )
+    try:
+        manager.process_executor.submit(
+            _enumerate_udp_ports,
+            ip_address,
+            manager=manager,
+        )
+    except AlreadyInChildProcess:
+        logger.debug("Enumerating UDP ports synchronously. Already in child process.")
+        _enumerate_udp_ports(ip_address, manager=manager)
 
 
 def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None:
