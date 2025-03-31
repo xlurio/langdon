@@ -34,14 +34,14 @@ class LangdonManager(contextlib.AbstractContextManager):
         self.__engine = sqlalchemy.create_engine(
             f"sqlite:///{db_path}",
         )
-        self.__process_executor = None
+        self.__thread_executor = None
 
     def __enter__(self) -> LangdonManager:
         SqlAlchemyModel.metadata.create_all(self.__engine, checkfirst=True)
         self.__session = orm.Session(self.__engine)
 
         if multiprocessing.parent_process() is None:
-            self.__process_executor = CF.ProcessPoolExecutor()
+            self.__thread_executor = CF.ThreadPoolExecutor()
 
         return self
 
@@ -54,13 +54,13 @@ class LangdonManager(contextlib.AbstractContextManager):
         return self.__config
 
     @property
-    def process_executor(self) -> CF.ProcessPoolExecutor:
-        if self.__process_executor is None:
+    def thread_executor(self) -> CF.ThreadPoolExecutor:
+        if self.__thread_executor is None:
             raise AlreadyInChildProcess(
                 "Forking a process from a child process is not allowed."
             )
 
-        return self.__process_executor
+        return self.__thread_executor
 
     def __exit__(
         self,
@@ -70,7 +70,7 @@ class LangdonManager(contextlib.AbstractContextManager):
     ) -> None:
         self.__session.rollback()
         self.__session.close()
-        self.__process_executor.shutdown(wait=True)
+        self.__thread_executor.shutdown(wait=True)
 
         if exc_type is None:
             return None
