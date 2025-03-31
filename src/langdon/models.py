@@ -220,7 +220,7 @@ class UsedPort(SqlAlchemyModel):
     ip_address_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_ipaddresses.id")
     )
-    ip_address = orm.Mapped[IpAddress] = orm.relationship(back_populates="ports")
+    ip_address: orm.Mapped[IpAddress] = orm.relationship(back_populates="ports")
     technology_relationships: orm.Mapped[list[PortTechRel]] = orm.relationship(
         back_populates="port", cascade="all, delete-orphan"
     )
