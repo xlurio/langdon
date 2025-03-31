@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import concurrent.futures as CF
 import contextlib
-import multiprocessing
 import sys
+import threading
 import tomllib
 from typing import TYPE_CHECKING, TypeVar
 
 import sqlalchemy
 from sqlalchemy import orm
 
-from langdon.exceptions import AlreadyInChildProcess, LangdonException
+from langdon.exceptions import AlreadyInChildThread, LangdonException
 from langdon.langdon_logging import logger
 from langdon.models import SqlAlchemyModel
 from langdon.output import OutputColor
@@ -40,7 +40,7 @@ class LangdonManager(contextlib.AbstractContextManager):
         SqlAlchemyModel.metadata.create_all(self.__engine, checkfirst=True)
         self.__session = orm.Session(self.__engine)
 
-        if multiprocessing.parent_process() is None:
+        if threading.current_thread() == threading.main_thread():
             self.__thread_executor = CF.ThreadPoolExecutor()
 
         return self
@@ -56,8 +56,8 @@ class LangdonManager(contextlib.AbstractContextManager):
     @property
     def thread_executor(self) -> CF.ThreadPoolExecutor:
         if self.__thread_executor is None:
-            raise AlreadyInChildProcess(
-                "Forking a process from a child process is not allowed."
+            raise AlreadyInChildThread(
+                "Creating a thread in a child thread is not allowed."
             )
 
         return self.__thread_executor

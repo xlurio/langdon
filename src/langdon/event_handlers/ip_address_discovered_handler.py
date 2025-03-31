@@ -13,7 +13,7 @@ from langdon.command_executor import (
     suppress_duplicated_recon_process,
 )
 from langdon.events import PortDiscovered
-from langdon.exceptions import AlreadyInChildProcess
+from langdon.exceptions import AlreadyInChildThread
 from langdon.langdon_logging import logger
 from langdon.models import IpAddress, IpDomainRel
 from langdon.utils import create_if_not_exist
@@ -98,7 +98,7 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
             ip_address,
             manager=manager,
         )
-    except AlreadyInChildProcess:
+    except AlreadyInChildThread:
         logger.debug("Enumerating UDP ports synchronously. Already in child process.")
         _enumerate_udp_ports(ip_address, manager=manager)
 
