@@ -103,5 +103,4 @@ class LangdonManager(contextlib.AbstractContextManager):
             print(f"Exiting...")
             sys.exit(0)
 
-        logger.exception("Error while running Langdon in child thread")
         raise exc_value.with_traceback(traceback)
