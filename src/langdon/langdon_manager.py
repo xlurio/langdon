@@ -17,6 +17,7 @@ from langdon.models import SqlAlchemyModel
 from langdon.output import OutputColor
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from types import TracebackType
 
     from langdon.events import Event
@@ -24,6 +25,13 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T", bound="Event")
+_events_mapping: Mapping[str, type[T]] = {}
+
+
+def register_event(event_cls: type[T]) -> type[T]:
+    _events_mapping[event_cls.__name__] = event_cls
+
+    return event_cls
 
 
 class LangdonManager(contextlib.AbstractContextManager):
@@ -45,6 +53,10 @@ class LangdonManager(contextlib.AbstractContextManager):
             self.__thread_executor = CF.ThreadPoolExecutor(os.cpu_count() or 1)
 
         return self
+
+    def get_event_by_name(self, name: str) -> type[Event]:
+        """Utility to avoid circular imports."""
+        return _events_mapping[name]
 
     @property
     def session(self) -> orm.Session:
@@ -91,7 +103,5 @@ class LangdonManager(contextlib.AbstractContextManager):
             print(f"Exiting...")
             sys.exit(0)
 
-        logger.exception(
-            "Error while running Langdon in child thread",
-        )
+        logger.exception("Error while running Langdon in child thread")
         raise exc_value.with_traceback(traceback)

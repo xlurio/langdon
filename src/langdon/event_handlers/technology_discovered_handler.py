@@ -11,7 +11,6 @@ from langdon.command_executor import (
     shell_command_execution_context,
     suppress_duplicated_recon_process,
 )
-from langdon.events import VulnerabilityDiscovered
 from langdon.langdon_logging import logger
 from langdon.models import (
     PortTechRel,
@@ -45,7 +44,7 @@ def _enumerate_vulnerabilities(
 
         for entry in output_parsed["RESULTS_EXPLOIT"]:
             message_broker.dispatch_event(
-                VulnerabilityDiscovered(
+                manager.get_event_by_name("VulnerabilityDiscovered")(
                     name=entry["Title"], source=entry["URL"], technology=technology
                 ),
                 manager=manager,

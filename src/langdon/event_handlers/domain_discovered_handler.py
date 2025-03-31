@@ -10,7 +10,6 @@ from langdon.command_executor import (
     shell_command_execution_context,
     suppress_duplicated_recon_process,
 )
-from langdon.events import IpAddressDiscovered
 from langdon.langdon_logging import logger
 from langdon.models import Domain
 from langdon.utils import create_if_not_exist
@@ -31,7 +30,7 @@ def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
             if "has address" in line:
                 ip_address = line.split()[-1]
                 message_broker.dispatch_event(
-                    IpAddressDiscovered(address=ip_address, domain=domain),
+                    manager.get_event_by_name("IpAddressDiscovered")(address=ip_address, domain=domain),
                     manager=manager,
                 )
 

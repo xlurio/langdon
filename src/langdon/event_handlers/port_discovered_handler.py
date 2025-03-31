@@ -18,11 +18,6 @@ from langdon.command_executor import (
     suppress_duplicated_recon_process,
 )
 from langdon.content_enumerators import google
-from langdon.events import (
-    DomainDiscovered,
-    TechnologyDiscovered,
-    WebDirectoryDiscovered,
-)
 from langdon.langdon_logging import logger
 from langdon.models import Domain, IpAddress, IpDomainRel, UsedPort
 from langdon.utils import create_if_not_exist
@@ -47,13 +42,15 @@ def _dispatch_web_directory_discovered(
         url_parsed = urllib.parse.urlparse(url)
         domain_name = url_parsed.netloc.split(":")[0]
 
-        message_broker.dispatch_event(DomainDiscovered(name=domain_name))
+        message_broker.dispatch_event(
+            manager.get_event_by_name("DomainDiscovered")(name=domain_name)
+        )
         new_domain_query = sql.select(Domain).filter(Domain.name == domain_name)
         new_domain = manager.session.execute(new_domain_query).scalar_one_or_none()
 
         cleaned_path = url_parsed.path
         message_broker.dispatch_event(
-            WebDirectoryDiscovered(
+            manager.get_event_by_name("WebDirectoryDiscovered")(
                 path=cleaned_path,
                 domain=new_domain,
                 ip_address=ip_address,
@@ -119,7 +116,7 @@ def _enumerate_web_directories(
         reader = csv.DictReader(temp_file)
         for row in reader:
             message_broker.dispatch_event(
-                TechnologyDiscovered(
+                manager.get_event_by_name("TechnologyDiscovered")(
                     name=row["firewall"],
                     version=None,
                     domain=domain,
@@ -133,7 +130,7 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
     def process_domains(domains):
         for domain in domains:
             message_broker.dispatch_event(
-                WebDirectoryDiscovered(
+                manager.get_event_by_name("WebDirectoryDiscovered")(
                     path="/", domain=domain, manager=manager, uses_ssl=event.port == 443
                 ),
                 manager=manager,
@@ -142,7 +139,7 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
 
     def process_ip_address():
         message_broker.dispatch_event(
-            WebDirectoryDiscovered(
+            manager.get_event_by_name("WebDirectoryDiscovered")(
                 path="/", ip_address=event.ip_address, manager=manager, uses_ssl=False
             ),
             manager=manager,
@@ -198,7 +195,9 @@ def _process_other_ports(
                 version = None
 
             message_broker.dispatch_event(
-                TechnologyDiscovered(name=name, version=version, port=port_obj),
+                manager.get_event_by_name("TechnologyDiscovered")(
+                    name=name, version=version, port=port_obj
+                ),
                 manager=manager,
             )
 

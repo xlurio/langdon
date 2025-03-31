@@ -15,17 +15,12 @@ from langdon.command_executor import (
     shell_command_execution_context,
     suppress_duplicated_recon_process,
 )
-from langdon.events import (
-    HttpCookieDiscovered,
-    HttpHeaderDiscovered,
-    WebDirectoryDiscovered,
-    WebDirectoryResponseDiscovered,
-)
 from langdon.langdon_logging import logger
 from langdon.models import Domain, IpAddress, WebDirectory
 from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
+    from langdon.events import WebDirectoryDiscovered
     from langdon.langdon_manager import LangdonManager
 
 
@@ -99,7 +94,7 @@ def _download_httpx_file(
             pathlib.Path(artifact_directory / httpx_file_name).read_bytes()
         )
         message_broker.dispatch_event(
-            WebDirectoryResponseDiscovered(
+            manager.get_event_by_name("WebDirectoryResponseDiscovered")(
                 directory=web_directory,
                 response_hash=md5_hasher.hexdigest(),
                 response_path=artifact_directory / httpx_file_name,
@@ -144,7 +139,7 @@ def _process_uncommon_headers(
         for header in uncommon_headers.split(","):
             header = header.strip()
             message_broker.dispatch_event(
-                HttpHeaderDiscovered(
+                manager.get_event_by_name("HttpHeaderDiscovered")(
                     name=header,
                     web_directory=web_directory,
                 ),
@@ -160,7 +155,7 @@ def _process_cookies(
         for cookie in cookies.split(","):
             cookie = cookie.strip()
             message_broker.dispatch_event(
-                HttpCookieDiscovered(
+                manager.get_event_by_name("HttpCookieDiscovered")(
                     name=cookie,
                     web_directory=web_directory,
                 ),

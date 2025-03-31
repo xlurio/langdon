@@ -75,7 +75,9 @@ def _process_new_response(
         split_response = event.response_path.read_bytes().split(b"\r\n\r\n", 1)
 
         if len(split_response) < 2:
-            return logger.info("Response to directory %s has no body", event.directory.path)
+            return logger.info(
+                "Response to directory %s has no body", event.directory.path
+            )
 
         file.write(event.response_path.read_bytes().split(b"\r\n\r\n", 1)[1])
         with (

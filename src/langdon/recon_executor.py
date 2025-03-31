@@ -82,9 +82,7 @@ def _process_amass_line_for_domains(
             f"A new domain was found but was not retrieved from output:\n{line}"
         )
     for domain_name in domains:
-        message_broker.dispatch_event(
-            DomainDiscovered(name=domain_name), manager=manager
-        )
+        message_broker.dispatch_event(DomainDiscovered(name=domain_name), manager=manager)
 
 
 def _process_amass_line_for_ips(

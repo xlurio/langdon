@@ -12,7 +12,6 @@ from langdon.command_executor import (
     shell_command_execution_context,
     suppress_duplicated_recon_process,
 )
-from langdon.events import PortDiscovered
 from langdon.exceptions import AlreadyInChildThread
 from langdon.langdon_logging import logger
 from langdon.models import IpAddress, IpDomainRel
@@ -47,7 +46,7 @@ def _process_nmap_output(
         is_filtered = state_data.attrib["state"] == "filtered"
 
         message_broker.dispatch_event(
-            PortDiscovered(
+            manager.get_event_by_name("PortDiscovered")(
                 port=port_number,
                 transport_layer_protocol=transport_layer_protocol,
                 is_filtered=is_filtered,
