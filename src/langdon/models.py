@@ -26,8 +26,10 @@ class Domain(SqlAlchemyModel):
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     name: orm.Mapped[str] = orm.mapped_column(unique=True)
     was_known: orm.Mapped[bool] = orm.mapped_column(default=False)
-    web_directories: orm.Mapped[list[WebDirectory]] = orm.relationship(  # Fixed type hint
-        back_populates="domain", cascade="all, delete-orphan"
+    web_directories: orm.Mapped[list[WebDirectory]] = (
+        orm.relationship(  # Fixed type hint
+            back_populates="domain", cascade="all, delete-orphan"
+        )
     )
     ip_relationships: orm.Mapped[list[IpDomainRel]] = orm.relationship(
         back_populates="domain", cascade="all, delete-orphan"
@@ -87,7 +89,7 @@ class WebDirectory(SqlAlchemyModel):
     domain_id: orm.Mapped[int | None] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_domains.id"), nullable=True
     )
-    domain: orm.Mapped[Domain | None] = orm.relationship(  # Fixed relationship
+    domain: orm.Mapped[Domain | None] = orm.relationship(
         back_populates="web_directories"
     )
     ip_id: orm.Mapped[int | None] = orm.mapped_column(
@@ -131,7 +133,9 @@ class DirHeaderRel(SqlAlchemyModel):
     directory: orm.Mapped[WebDirectory] = orm.relationship(
         back_populates="http_header_relationships"
     )
-    header: orm.Mapped[HttpHeader] = orm.relationship(back_populates="directory_relationships")
+    header: orm.Mapped[HttpHeader] = orm.relationship(
+        back_populates="directory_relationships"
+    )
 
 
 class HttpCookie(SqlAlchemyModel):
@@ -154,7 +158,9 @@ class DirCookieRel(SqlAlchemyModel):
     directory_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_webdirectories.id")
     )
-    cookie: orm.Mapped[HttpCookie] = orm.relationship(back_populates="directory_relationships")
+    cookie: orm.Mapped[HttpCookie] = orm.relationship(
+        back_populates="directory_relationships"
+    )
     directory: orm.Mapped[WebDirectory] = orm.relationship(
         back_populates="http_cookie_relationships"
     )
