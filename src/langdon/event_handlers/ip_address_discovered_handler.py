@@ -56,15 +56,14 @@ def _process_nmap_output(
         )
 
 
-def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
+def _enumerate_udp_ports(ip_address: IpAddress, *, manager: LangdonManager) -> None:
     with (
         NamedTemporaryFile("w+b", suffix=".xml") as temp_file,
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
             CommandData(
                 command="nmap",
-                args=f"--host-timeout 1h -Pn -sS -sU -vv -oX '{temp_file.name}' "
-                f"'{ip_address.address}'",
+                args=f"-Pn -sU -vv -oX '{temp_file.name}' '{ip_address.address}'",
             ),
             manager=manager,
         ),
@@ -73,6 +72,30 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
         file_content = temp_file.read()
         logger.debug("Nmap XML:\n%s", file_content)
         _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
+
+
+def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
+    with (
+        NamedTemporaryFile("w+b", suffix=".xml") as temp_file,
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(
+            CommandData(
+                command="nmap",
+                args=f"-Pn -sS -vv -oX '{temp_file.name}' '{ip_address.address}'",
+            ),
+            manager=manager,
+        ),
+    ):
+        temp_file.seek(0)
+        file_content = temp_file.read()
+        logger.debug("Nmap XML:\n%s", file_content)
+        _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
+
+    manager.process_executor.submit(
+        _enumerate_udp_ports,
+        ip_address,
+        manager=manager,
+    )
 
 
 def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None:

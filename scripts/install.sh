@@ -21,7 +21,7 @@ Pin-Priority: 1000
 apt update -y ; apt install -y tor firefox build-essential libssl-dev \
     zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev \
     xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev dnsutils nmap \
-    ffmpeg
+    ffmpeg graphviz
 
 # PyEnv
 curl -fsSL https://pyenv.run | bash

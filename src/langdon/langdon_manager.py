@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures as CF
 import contextlib
 import sys
 import tomllib
@@ -7,8 +8,9 @@ from typing import TYPE_CHECKING, TypeVar
 
 import sqlalchemy
 from sqlalchemy import orm
-from langdon.langdon_logging import logger
+
 from langdon.exceptions import LangdonException
+from langdon.langdon_logging import logger
 from langdon.models import SqlAlchemyModel
 from langdon.output import OutputColor
 
@@ -35,6 +37,7 @@ class LangdonManager(contextlib.AbstractContextManager):
     def __enter__(self) -> LangdonManager:
         SqlAlchemyModel.metadata.create_all(self.__engine, checkfirst=True)
         self.__session = orm.Session(self.__engine)
+        self.__process_executor = CF.ProcessPoolExecutor()
 
         return self
 
@@ -45,6 +48,10 @@ class LangdonManager(contextlib.AbstractContextManager):
     @property
     def config(self) -> dict[ConfigurationKeyT, str]:
         return self.__config
+    
+    @property
+    def process_executor(self) -> CF.ProcessPoolExecutor:
+        return self.__process_executor
 
     def __exit__(
         self,
@@ -54,6 +61,7 @@ class LangdonManager(contextlib.AbstractContextManager):
     ) -> None:
         self.__session.rollback()
         self.__session.close()
+        self.__process_executor.shutdown(wait=True)
 
         if exc_type is None:
             return None
