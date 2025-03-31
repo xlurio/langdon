@@ -72,9 +72,15 @@ class LangdonManager(contextlib.AbstractContextManager):
         self.__session.close()
         self.__thread_executor.shutdown(wait=True)
 
-        if exc_type is None:
-            return None
+        if exc_type is not None:
+            self._handle_exception(exc_type, exc_value, traceback)
 
+    def _handle_exception(
+        self,
+        exc_type: type[Exception],
+        exc_value: Exception,
+        traceback: TracebackType,
+    ) -> None:
         if exc_type == LangdonException:
             logger.debug("Error while running Langdon", exc_info=True)
             print(f"{OutputColor.RED}Error: {exc_value!s}{OutputColor.RESET}")
@@ -83,5 +89,10 @@ class LangdonManager(contextlib.AbstractContextManager):
         elif exc_type == KeyboardInterrupt:
             print(f"Exiting...")
             sys.exit(0)
+
+        if not threading.current_thread() == threading.main_thread():
+            logger.exception(
+                "Error while running Langdon in child thread",
+            )
 
         raise exc_value.with_traceback(traceback)
