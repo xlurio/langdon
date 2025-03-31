@@ -143,7 +143,7 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     known_domain_names = _get_known_domain_names(manager)
     generated_domains = _generate_domains(known_domain_names, manager)
     _resolve_domains(generated_domains, manager)
-    _discover_with_gobuster(known_domain_names, manager)
+    _discover_domains_with_gobuster(known_domain_names, manager)
 
 
 def _get_known_domain_names(manager: LangdonManager) -> list[str]:
@@ -192,7 +192,7 @@ def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> N
                     )
 
 
-def _discover_with_gobuster(
+def _discover_domains_with_gobuster(
     known_domain_names: list[str], manager: LangdonManager
 ) -> None:
     dns_wordlist = manager.config["dns_wordlist"]
@@ -275,7 +275,7 @@ def _discover_content_actively(*, manager: LangdonManager) -> None:
     user_agent = manager.config["user_agent"]
 
     _crawl_with_katana(known_urls_separated_by_comma, manager)
-    _discover_with_gobuster(
+    _discover_content_with_gobuster(
         known_urls, extensions_separated_by_comma, user_agent, manager
     )
 
@@ -315,7 +315,7 @@ def _crawl_with_katana(
                 )
 
 
-def _discover_with_gobuster(
+def _discover_content_with_gobuster(
     known_urls: list[str],
     extensions_separated_by_comma: str,
     user_agent: str,
