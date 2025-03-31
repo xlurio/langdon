@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import concurrent.futures as CF
 import contextlib
+import os
 import sys
 import threading
 import tomllib
@@ -41,7 +42,7 @@ class LangdonManager(contextlib.AbstractContextManager):
         self.__session = orm.Session(self.__engine)
 
         if threading.current_thread() == threading.main_thread():
-            self.__thread_executor = CF.ThreadPoolExecutor()
+            self.__thread_executor = CF.ThreadPoolExecutor(os.cpu_count() or 1)
 
         return self
 
