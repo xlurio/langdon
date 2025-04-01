@@ -42,6 +42,9 @@ exec "$SHELL"
 pip install --upgrade pip
 python -m pip install --user dnsgen wafw00f
 
+# Ruby Bundler
+gem install bundler
+
 # Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
@@ -102,6 +105,8 @@ exec "$SHELL"
 # WhatWeb
 git clone https://github.com/urbanadventurer/WhatWeb.git
 cd WhatWeb
+bundle update
+bundle install
 chmod +x whatweb
 echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.profile

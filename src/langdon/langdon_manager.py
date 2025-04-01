@@ -131,4 +131,7 @@ class LangdonManager(contextlib.AbstractContextManager):
             print(f"Exiting...")
             sys.exit(0)
 
+        logger.debug(
+            "Unhandled exception while running Langdon", exc_info=True
+        )
         raise exc_value.with_traceback(traceback)
