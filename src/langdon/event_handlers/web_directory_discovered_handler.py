@@ -94,6 +94,9 @@ def _download_httpx_file(
             timeout=10,
         ) as _,
     ):
+        if not pathlib.Path(artifact_directory / httpx_file_name).exists():
+            return logger.info("No response body found for %s", cleaned_url)
+
         md5_hasher = hashlib.md5()
         md5_hasher.update(
             pathlib.Path(artifact_directory / httpx_file_name).read_bytes()
