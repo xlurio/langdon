@@ -215,7 +215,6 @@ def _process_found_port(
 
 
 def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
-    breakpoint()
     was_already_known = create_if_not_exist(
         UsedPort,
         port=event.port,
