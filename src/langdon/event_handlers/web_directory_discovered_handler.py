@@ -12,8 +12,10 @@ from sqlalchemy import sql
 from langdon import message_broker, throttler
 from langdon.command_executor import (
     CommandData,
+    internal_shell_command_execution_context,
     shell_command_execution_context,
     suppress_duplicated_recon_process,
+    supress_called_process_error,
 )
 from langdon.langdon_logging import logger
 from langdon.models import Domain, IpAddress, WebDirectory
@@ -78,15 +80,15 @@ def _download_httpx_file(
     artifact_directory.mkdir(parents=True, exist_ok=True)
 
     with (
+        supress_called_process_error(),
         suppress_duplicated_recon_process(),
-        shell_command_execution_context(
+        internal_shell_command_execution_context(
             CommandData(
                 command="httpx",
                 args=f"{cleaned_url} --headers 'User-Agent' '{user_agent}' --download "
                 f"{artifact_directory / httpx_file_name!s}",
             ),
             manager=manager,
-            ignore_exit_code=True,
         ) as _,
     ):
         md5_hasher = hashlib.md5()
@@ -134,25 +136,26 @@ def _process_uncommon_headers(
     if (
         uncommon_headers := item.get("plugins", {})
         .get("UncommonHeaders", {})
-        .get("string", {})
+        .get("string", [None])[0]
     ):
-        for header in uncommon_headers.split(","):
-            header = header.strip()
-            message_broker.dispatch_event(
-                manager.get_event_by_name("HttpHeaderDiscovered")(
-                    name=header,
-                    web_directory=web_directory,
-                ),
-                manager=manager,
-            )
+        if isinstance(uncommon_headers, str):
+            for header in uncommon_headers.split(","):
+                header = header.strip()
+                message_broker.dispatch_event(
+                    manager.get_event_by_name("HttpHeaderDiscovered")(
+                        name=header,
+                        web_directory=web_directory,
+                    ),
+                    manager=manager,
+                )
 
 
 def _process_cookies(
     item: dict[str, Any], web_directory: WebDirectory, *, manager: LangdonManager
 ) -> None:
     cookies: str
-    if cookies := item.get("plugins", {}).get("Cookies", {}).get("string", {}):
-        for cookie in cookies.split(","):
+    if cookies := item.get("plugins", {}).get("Cookies", {}).get("string", []):
+        for cookie in cookies:
             cookie = cookie.strip()
             message_broker.dispatch_event(
                 manager.get_event_by_name("HttpCookieDiscovered")(

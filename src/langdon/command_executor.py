@@ -60,9 +60,12 @@ def _try_to_execute_command(
         ) from exception
 
 
-@contextlib.contextmanager
-def shell_command_execution_context(
-    command: CommandData, *, manager: LangdonManager, ignore_exit_code: bool = False
+def _execute_command_with_context(
+    command: CommandData,
+    *,
+    manager: LangdonManager,
+    ignore_exit_code: bool,
+    execute_command: Callable[[CommandData, bool], str],
 ) -> Iterator[str]:
     session = manager.session
     query = (
@@ -78,10 +81,43 @@ def shell_command_execution_context(
             command=command.shell_command_line,
         )
 
-    yield _try_to_execute_command(command, ignore_exit_code=ignore_exit_code)
+    yield execute_command(command, ignore_exit_code=ignore_exit_code)
 
     session.add(ReconProcess(name=command.command, args=command.args))
     session.commit()
+
+
+@contextlib.contextmanager
+def shell_command_execution_context(
+    command: CommandData, *, manager: LangdonManager, ignore_exit_code: bool = False
+) -> Iterator[str]:
+    yield from _execute_command_with_context(
+        command,
+        manager=manager,
+        ignore_exit_code=ignore_exit_code,
+        execute_command=_try_to_execute_command,
+    )
+
+
+def _direct_execute_command(command: CommandData, *, ignore_exit_code: bool) -> str:
+    logger.debug("Executing command: %s", command.shell_command_line)
+    result = subprocess.run(
+        command.shell_command_line, capture_output=True, check=not ignore_exit_code
+    ).stdout.decode()
+    logger.debug("Output:\n%s", result)
+    return result
+
+
+@contextlib.contextmanager
+def internal_shell_command_execution_context(
+    command: CommandData, *, manager: LangdonManager, ignore_exit_code: bool = False
+) -> Iterator[str]:
+    yield from _execute_command_with_context(
+        command,
+        manager=manager,
+        ignore_exit_code=ignore_exit_code,
+        execute_command=_direct_execute_command,
+    )
 
 
 class FunctionData(pydantic.BaseModel, Generic[T]):
@@ -142,3 +178,26 @@ def suppress_duplicated_recon_process() -> Iterator[None]:
         yield
     except DuplicatedReconProcessException as exception:
         logger.debug("Duplicated recon process: %s", exception.command)
+
+
+@contextlib.contextmanager
+def supress_called_process_error() -> Iterator[None]:
+    """
+    Context manager to suppress CalledProcessError.
+    This is useful for functions that are called multiple times with the same arguments.
+    """
+    try:
+        yield
+    except subprocess.CalledProcessError as exception:
+        cleaned_stderr = (
+            exception.stderr.decode()
+            if isinstance(exception.stderr, bytes)
+            else "unknown"
+        )
+
+        logger.debug(
+            "Command '%s' failed with code %d: %s",
+            exception.cmd,
+            exception.returncode,
+            cleaned_stderr,
+        )

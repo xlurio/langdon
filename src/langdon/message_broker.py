@@ -13,6 +13,7 @@ T = TypeVar("T", bound="Event")
 def dispatch_event(event: T, *, manager: LangdonManager) -> None:
     from langdon.event_handlers import (
         domain_discovered_handler,
+        http_cookie_discovered_handler,
         http_header_dicovered_handler,
         ip_address_discovered_handler,
         port_discovered_handler,
@@ -23,6 +24,7 @@ def dispatch_event(event: T, *, manager: LangdonManager) -> None:
     )
     from langdon.events import (
         DomainDiscovered,
+        HttpCookieDiscovered,
         HttpHeaderDiscovered,
         IpAddressDiscovered,
         PortDiscovered,
@@ -41,7 +43,7 @@ def dispatch_event(event: T, *, manager: LangdonManager) -> None:
         WebDirectoryDiscovered: web_directory_discovered_handler.handle_event,
         WebDirectoryResponseDiscovered: web_directory_response_discovered_handler.handle_event,
         HttpHeaderDiscovered: http_header_dicovered_handler.handle_event,
+        HttpCookieDiscovered: http_cookie_discovered_handler.handle_event,
     }
-
 
     EVENT_HANDLERS_MAPPING[type(event)](event, manager=manager)
