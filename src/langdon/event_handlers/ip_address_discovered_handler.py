@@ -92,7 +92,7 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
         _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
 
     try:
-        manager.thread_executor.submit(
+        manager.submit_task(
             _enumerate_udp_ports,
             ip_address,
             manager=manager,

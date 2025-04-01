@@ -54,6 +54,8 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
         _process_subfinder(temp_file.name, manager)
         _process_assetfinder(known_domains_names, manager)
 
+    manager.wait_for_pending_tasks()
+
 
 def _process_amass_for_domain(domain: str) -> None:
     amass_domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)*[^.\s]+) \(FQDN\)")
@@ -101,7 +103,8 @@ def _process_amass_line_for_ips(
 
 
 def _process_amass_for_domains(domains: set[str], manager: LangdonManager) -> None:
-    manager.thread_executor.map(_process_amass_for_domain, domains)
+    for domain in domains:
+        manager.submit_task(_process_amass_for_domain, domains)
 
 
 def _process_subfinder(temp_file_name: str, manager: LangdonManager) -> None:

@@ -17,7 +17,7 @@ from langdon.models import SqlAlchemyModel
 from langdon.output import OutputColor
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from types import TracebackType
 
     from langdon.events import Event
@@ -35,6 +35,8 @@ def register_event(event_cls: type[T]) -> type[T]:
 
 
 class LangdonManager(contextlib.AbstractContextManager):
+    __pending_futures: list[CF.Future[None]]
+
     def __init__(self) -> None:
         with open("pyproject.toml", "rb") as pyproject_file:
             self.__config = tomllib.load(pyproject_file)["tool"]["langdon"]
@@ -44,6 +46,7 @@ class LangdonManager(contextlib.AbstractContextManager):
             f"sqlite:///{db_path}",
         )
         self.__thread_executor = None
+        self.__pending_futures = []
 
     def __enter__(self) -> LangdonManager:
         SqlAlchemyModel.metadata.create_all(self.__engine, checkfirst=True)
@@ -74,6 +77,29 @@ class LangdonManager(contextlib.AbstractContextManager):
             )
 
         return self.__thread_executor
+
+    def submit_task(
+        self,
+        target: Callable[..., None],
+        *args: object,
+        **kwargs: object,
+    ) -> CF.Future[None] | None:
+        if self.__thread_executor is None:
+            logger.debug("Already in child thread, running task directly")
+            return target(*args, **kwargs)
+
+        self.__pending_futures.append(
+            self.__thread_executor.submit(target, *args, **kwargs)
+        )
+
+    def wait_for_pending_tasks(self) -> None:
+        if self.__thread_executor is None:
+            return
+
+        for future in self.__pending_futures:
+            future.result()
+
+        self.__pending_futures.clear()
 
     def __exit__(
         self,
