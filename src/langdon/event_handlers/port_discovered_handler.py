@@ -74,7 +74,8 @@ def _enumerate_web_directories(
         shell_command_execution_context(
             CommandData(
                 command="gau",
-                args=f"--blacklist png,jpg,gif,ttf,woff --fp --json {cleaned_host_name}",
+                args="--blacklist png,jpg,gif,ttf,woff --fp --json "
+                f"{cleaned_host_name}",
             ),
             manager=manager,
         ) as output,
@@ -150,7 +151,7 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
         IpDomainRel.ip_id == event.ip_address.id
     )
     query = sql.select(Domain).where(Domain.id.in_(domain_ids_subquery))
-    domains = manager.session.scalars(query)
+    domains = manager.session.scalars(query).all()
 
     if domains:
         process_domains(domains)
@@ -214,6 +215,7 @@ def _process_found_port(
 
 
 def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
+    breakpoint()
     was_already_known = create_if_not_exist(
         UsedPort,
         port=event.port,
@@ -235,4 +237,11 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
     )
     port_obj = manager.session.execute(query).scalar_one()
 
-    _process_found_port(port_obj, event, manager=manager)
+    if not port_obj.is_filtered:
+        _process_found_port(port_obj, event, manager=manager)
+    else:
+        logger.debug(
+            "Port %s on IP %s is filtered. Skipping further processing.",
+            event.port,
+            event.ip_address.address,
+        )
