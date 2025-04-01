@@ -83,7 +83,9 @@ class LangdonManager(contextlib.AbstractContextManager):
     ) -> None:
         self.__session.rollback()
         self.__session.close()
-        self.__thread_executor.shutdown(wait=True)
+
+        if self.__thread_executor:
+            self.__thread_executor.shutdown(wait=True)
 
         if exc_type is not None:
             self._handle_exception(exc_type, exc_value, traceback)
