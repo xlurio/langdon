@@ -84,7 +84,9 @@ def _process_amass_line_for_domains(
             f"A new domain was found but was not retrieved from output:\n{line}"
         )
     for domain_name in domains:
-        message_broker.dispatch_event(DomainDiscovered(name=domain_name), manager=manager)
+        message_broker.dispatch_event(
+            DomainDiscovered(name=domain_name), manager=manager
+        )
 
 
 def _process_amass_line_for_ips(
@@ -313,7 +315,7 @@ def _crawl_with_katana(
 
                 path = parsed_urls.path
                 message_broker.dispatch_event(
-                    WebDirectoryDiscovered(path=path, domain=new_domain),
+                    WebDirectoryDiscovered(path=path, domain=new_domain, uses_ssl=True),
                     manager=manager,
                 )
 
@@ -349,7 +351,9 @@ def _discover_content_with_gobuster(
             for discovered_path in output.splitlines():
                 if cleaned_path := discovered_path.strip():
                     message_broker.dispatch_event(
-                        WebDirectoryDiscovered(path=cleaned_path, domain=known_domain),
+                        WebDirectoryDiscovered(
+                            path=cleaned_path, domain=known_domain, uses_ssl=True
+                        ),
                         manager=manager,
                     )
 

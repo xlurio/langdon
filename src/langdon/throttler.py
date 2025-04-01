@@ -6,6 +6,8 @@ import random
 import time
 from typing import TYPE_CHECKING
 
+from langdon.langdon_logging import logger
+
 if TYPE_CHECKING:
     from langdon.langdon_manager import LangdonManager
 
@@ -14,8 +16,13 @@ MAX_TIME_BETWEEN_REQUESTS = 10
 
 
 def _read_cache_data(*, manager: LangdonManager) -> dict[str, float]:
-    cache_file = manager.config["cache_file"]
-    return json.loads(pathlib.Path(cache_file).read_text())
+    try:
+        cache_file = manager.config["cache_file"]
+        return json.loads(pathlib.Path(cache_file).read_text())
+    
+    except FileNotFoundError:
+        logger.debug("No cache file found")
+        return {}
 
 
 def _write_cache_data(data: dict[str, float], *, manager: LangdonManager) -> None:
@@ -34,7 +41,7 @@ def _set_cache(key, value, *, manager: LangdonManager) -> None:
 
 
 def wait_for_slot(queue: str, *, manager: LangdonManager) -> None:
-    if queue not in _read_cache_data():
+    if queue not in _read_cache_data(manager=manager):
         return _set_cache(queue, time.time(), manager=manager)
 
     expected_time_between_requests = random.randint(
