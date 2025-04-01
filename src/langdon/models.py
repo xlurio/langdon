@@ -174,9 +174,7 @@ class WebDirectoryScreenshot(SqlAlchemyModel):
     directory_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_webdirectories.id")
     )
-    directory: orm.Mapped[WebDirectory] = orm.relationship(
-        back_populates="screenshots", cascade="all, delete-orphan"
-    )
+    directory: orm.Mapped[WebDirectory] = orm.relationship(back_populates="screenshots")
 
 
 TransportLayerProtocolT = Literal["tcp", "udp"]
