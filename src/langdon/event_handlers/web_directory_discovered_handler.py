@@ -14,8 +14,9 @@ from langdon.command_executor import (
     CommandData,
     internal_shell_command_execution_context,
     shell_command_execution_context,
+    suppress_called_process_error,
     suppress_duplicated_recon_process,
-    supress_called_process_error,
+    suppress_timeout_expired_error,
 )
 from langdon.langdon_logging import logger
 from langdon.models import Domain, IpAddress, WebDirectory
@@ -80,7 +81,8 @@ def _download_httpx_file(
     artifact_directory.mkdir(parents=True, exist_ok=True)
 
     with (
-        supress_called_process_error(),
+        suppress_timeout_expired_error(),
+        suppress_called_process_error(),
         suppress_duplicated_recon_process(),
         internal_shell_command_execution_context(
             CommandData(
@@ -89,6 +91,7 @@ def _download_httpx_file(
                 f"{artifact_directory / httpx_file_name!s}",
             ),
             manager=manager,
+            timeout=10,
         ) as _,
     ):
         md5_hasher = hashlib.md5()

@@ -37,12 +37,15 @@ class CommandData(pydantic.BaseModel):
 
 
 def _try_to_execute_command(
-    command: CommandData, *, ignore_exit_code: bool = False
+    command: CommandData, *, ignore_exit_code: bool = False, timeout: int | None
 ) -> str:
     try:
         logger.debug("Executing command: %s", command.shell_command_line)
         result = subprocess.run(
-            command.shell_command_line, capture_output=True, check=not ignore_exit_code
+            command.shell_command_line,
+            capture_output=True,
+            check=not ignore_exit_code,
+            timeout=timeout,
         ).stdout.decode()
         logger.debug("Output:\n%s", result)
 
@@ -66,6 +69,7 @@ def _execute_command_with_context(
     manager: LangdonManager,
     ignore_exit_code: bool,
     execute_command: Callable[[CommandData, bool], str],
+    timeout: int | None,
 ) -> Iterator[str]:
     session = manager.session
     query = (
@@ -81,7 +85,7 @@ def _execute_command_with_context(
             command=command.shell_command_line,
         )
 
-    yield execute_command(command, ignore_exit_code=ignore_exit_code)
+    yield execute_command(command, ignore_exit_code=ignore_exit_code, timeout=timeout)
 
     session.add(ReconProcess(name=command.command, args=command.args))
     session.commit()
@@ -89,20 +93,30 @@ def _execute_command_with_context(
 
 @contextlib.contextmanager
 def shell_command_execution_context(
-    command: CommandData, *, manager: LangdonManager, ignore_exit_code: bool = False
+    command: CommandData,
+    *,
+    manager: LangdonManager,
+    ignore_exit_code: bool = False,
+    timeout: int | None = None,
 ) -> Iterator[str]:
     yield from _execute_command_with_context(
         command,
         manager=manager,
         ignore_exit_code=ignore_exit_code,
         execute_command=_try_to_execute_command,
+        timeout=timeout,
     )
 
 
-def _direct_execute_command(command: CommandData, *, ignore_exit_code: bool) -> str:
+def _direct_execute_command(
+    command: CommandData, *, ignore_exit_code: bool, timeout: int | None
+) -> str:
     logger.debug("Executing command: %s", command.shell_command_line)
     result = subprocess.run(
-        command.shell_command_line, capture_output=True, check=not ignore_exit_code
+        command.shell_command_line,
+        capture_output=True,
+        check=not ignore_exit_code,
+        timeout=timeout,
     ).stdout.decode()
     logger.debug("Output:\n%s", result)
     return result
@@ -110,13 +124,18 @@ def _direct_execute_command(command: CommandData, *, ignore_exit_code: bool) -> 
 
 @contextlib.contextmanager
 def internal_shell_command_execution_context(
-    command: CommandData, *, manager: LangdonManager, ignore_exit_code: bool = False
+    command: CommandData,
+    *,
+    manager: LangdonManager,
+    ignore_exit_code: bool = False,
+    timeout: int | None = None,
 ) -> Iterator[str]:
     yield from _execute_command_with_context(
         command,
         manager=manager,
         ignore_exit_code=ignore_exit_code,
         execute_command=_direct_execute_command,
+        timeout=timeout,
     )
 
 
@@ -181,7 +200,7 @@ def suppress_duplicated_recon_process() -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def supress_called_process_error() -> Iterator[None]:
+def suppress_called_process_error() -> Iterator[None]:
     """
     Context manager to suppress CalledProcessError.
     This is useful for functions that are called multiple times with the same arguments.
@@ -200,4 +219,20 @@ def supress_called_process_error() -> Iterator[None]:
             exception.cmd,
             exception.returncode,
             cleaned_stderr,
+        )
+
+
+@contextlib.contextmanager
+def suppress_timeout_expired_error() -> Iterator[None]:
+    """
+    Context manager to suppress TimeoutExpired.
+    This is useful for functions that are called multiple times with the same arguments.
+    """
+    try:
+        yield
+    except subprocess.TimeoutExpired as exception:
+        logger.debug(
+            "Command '%s' timed out after %d seconds",
+            exception.cmd,
+            exception.timeout,
         )

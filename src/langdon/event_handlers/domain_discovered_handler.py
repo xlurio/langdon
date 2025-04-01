@@ -9,6 +9,7 @@ from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
     suppress_duplicated_recon_process,
+    suppress_timeout_expired_error,
 )
 from langdon.langdon_logging import logger
 from langdon.models import Domain
@@ -21,16 +22,19 @@ if TYPE_CHECKING:
 
 def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
     with (
+        suppress_timeout_expired_error(),
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
-            CommandData(command="host", args=domain.name), manager=manager
+            CommandData(command="host", args=domain.name), manager=manager, timeout=3600
         ) as result,
     ):
         for line in result.splitlines():
             if "has address" in line:
                 ip_address = line.split()[-1]
                 message_broker.dispatch_event(
-                    manager.get_event_by_name("IpAddressDiscovered")(address=ip_address, domain=domain),
+                    manager.get_event_by_name("IpAddressDiscovered")(
+                        address=ip_address, domain=domain
+                    ),
                     manager=manager,
                 )
 
