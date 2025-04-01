@@ -70,10 +70,3 @@ class HttpHeaderDiscovered(Event):
 class HttpCookieDiscovered(Event):
     name: str
     web_directory: WebDirectory
-
-
-@register_event
-class WebDirectoryResponseDiscovered(Event):
-    directory: WebDirectory
-    response_hash: str
-    response_path: Path

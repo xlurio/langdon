@@ -97,7 +97,7 @@ def _process_amass_line_for_ips(
         raise LangdonProgrammingError(
             f"A new IP address was found but was not retrieved from output:\n{line}"
         )
-    for ip_address in regex.finditer(line):
+    for ip_address in ip_addresses:
         message_broker.dispatch_event(
             IpAddressDiscovered(address=ip_address),
             manager=manager,

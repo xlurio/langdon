@@ -20,7 +20,6 @@ def dispatch_event(event: T, *, manager: LangdonManager) -> None:
         technology_discovered_handler,
         vulnerability_discovered_handler,
         web_directory_discovered_handler,
-        web_directory_response_discovered_handler,
     )
     from langdon.events import (
         DomainDiscovered,
@@ -31,7 +30,6 @@ def dispatch_event(event: T, *, manager: LangdonManager) -> None:
         TechnologyDiscovered,
         VulnerabilityDiscovered,
         WebDirectoryDiscovered,
-        WebDirectoryResponseDiscovered,
     )
 
     EVENT_HANDLERS_MAPPING = {
@@ -41,7 +39,6 @@ def dispatch_event(event: T, *, manager: LangdonManager) -> None:
         IpAddressDiscovered: ip_address_discovered_handler.handle_event,
         PortDiscovered: port_discovered_handler.handle_event,
         WebDirectoryDiscovered: web_directory_discovered_handler.handle_event,
-        WebDirectoryResponseDiscovered: web_directory_response_discovered_handler.handle_event,
         HttpHeaderDiscovered: http_header_dicovered_handler.handle_event,
         HttpCookieDiscovered: http_cookie_discovered_handler.handle_event,
     }

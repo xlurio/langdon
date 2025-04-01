@@ -96,9 +96,6 @@ class WebDirectory(SqlAlchemyModel):
         sqlalchemy.ForeignKey("langdon_ipaddresses.id"), nullable=True
     )
     uses_ssl: orm.Mapped[bool]
-    responses: orm.Mapped[list[WebDirectoryResponse]] = orm.relationship(
-        back_populates="directory", cascade="all, delete-orphan"
-    )
     technologies: orm.Mapped[list[WebDirTechRel]] = orm.relationship(
         back_populates="directory", cascade="all, delete-orphan"
     )
@@ -106,6 +103,9 @@ class WebDirectory(SqlAlchemyModel):
         back_populates="directory", cascade="all, delete-orphan"
     )
     http_cookie_relationships: orm.Mapped[list[DirCookieRel]] = orm.relationship(
+        back_populates="directory", cascade="all, delete-orphan"
+    )
+    screenshots: orm.Mapped[list[WebDirectoryScreenshot]] = orm.relationship(
         back_populates="directory", cascade="all, delete-orphan"
     )
 
@@ -166,36 +166,16 @@ class DirCookieRel(SqlAlchemyModel):
     )
 
 
-class WebDirectoryResponse(SqlAlchemyModel):
-    __tablename__ = "langdon_webdirectoryresponses"
-    __table_args__ = (
-        sqlalchemy.UniqueConstraint(
-            "directory_id", "response_hash", name="_wd_id_hash_uc"
-        ),
-    )
+class WebDirectoryScreenshot(SqlAlchemyModel):
+    __tablename__ = "langdon_webdirectoryscreenshots"
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    screenshot_path: orm.Mapped[str]
     directory_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_webdirectories.id")
     )
-    response_hash: orm.Mapped[str]
-    response_path: orm.Mapped[str]
-    directory: orm.Mapped[WebDirectory] = orm.relationship(back_populates="responses")
-    screenshot: orm.Mapped[WebDirectoryResponseScreenshot] = orm.relationship(
-        back_populates="response", uselist=False, cascade="all, delete-orphan"
-    )
-
-
-class WebDirectoryResponseScreenshot(SqlAlchemyModel):
-    __tablename__ = "langdon_webdirectoryresponsescreenshots"
-
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
-    web_directory_response_id: orm.Mapped[int] = orm.mapped_column(
-        sqlalchemy.ForeignKey("langdon_webdirectoryresponses.id"), unique=True
-    )
-    screenshot_path: orm.Mapped[str]
-    response: orm.Mapped[WebDirectoryResponse] = orm.relationship(
-        back_populates="screenshot"
+    directory: orm.Mapped[WebDirectory] = orm.relationship(
+        back_populates="screenshots", cascade="all, delete-orphan"
     )
 
 

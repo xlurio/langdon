@@ -43,7 +43,8 @@ def _dispatch_web_directory_discovered(
         domain_name = url_parsed.netloc.split(":")[0]
 
         message_broker.dispatch_event(
-            manager.get_event_by_name("DomainDiscovered")(name=domain_name)
+            manager.get_event_by_name("DomainDiscovered")(name=domain_name),
+            manager=manager,
         )
         new_domain_query = sql.select(Domain).filter(Domain.name == domain_name)
         new_domain = manager.session.execute(new_domain_query).scalar_one_or_none()
@@ -230,9 +231,9 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
 
     query = (
         sql.select(UsedPort)
+        .where(UsedPort.ip_address_id == event.ip_address.id)
         .where(UsedPort.port == event.port)
         .where(UsedPort.transport_layer_protocol == event.transport_layer_protocol)
-        .where(UsedPort.is_filtered == event.is_filtered)
     )
     port_obj = manager.session.execute(query).scalar_one()
 

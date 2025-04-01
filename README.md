@@ -16,7 +16,6 @@ CLI for network application reconnaissance
 - gobuster ~= v3.6.0
 - gowitness ~= 3.0.5
 - host ~= 9.20.4-4-Debian
-- httpx ~= v1.6.10
 - katana ~= v1.1.2
 - massdns ~= v1.1.0-9-gcb49ad2
 - Mozilla Firefox ~= 128.7.0esr

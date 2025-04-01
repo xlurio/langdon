@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import hashlib
+import csv
+import glob
 import json
+import os
 import pathlib
+import tempfile
 import urllib.parse
-import uuid
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import sql
@@ -12,14 +14,16 @@ from sqlalchemy import sql
 from langdon import message_broker, throttler
 from langdon.command_executor import (
     CommandData,
-    internal_shell_command_execution_context,
     shell_command_execution_context,
-    suppress_called_process_error,
     suppress_duplicated_recon_process,
-    suppress_timeout_expired_error,
 )
 from langdon.langdon_logging import logger
-from langdon.models import Domain, IpAddress, WebDirectory
+from langdon.models import (
+    Domain,
+    IpAddress,
+    WebDirectory,
+    WebDirectoryScreenshot,
+)
 from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
@@ -27,37 +31,35 @@ if TYPE_CHECKING:
     from langdon.langdon_manager import LangdonManager
 
 
-def _clean_hostname(web_directory: WebDirectory, *, manager: LangdonManager) -> str:
+def _get_domain_or_ip_name(
+    web_directory: WebDirectory, *, manager: LangdonManager
+) -> str:
     if web_directory.domain_id is not None:
-        domain_query = sql.select(Domain.name).filter(
-            Domain.id == web_directory.domain_id
-        )
-        return manager.session.execute(domain_query).scalar_one()
+        query = sql.select(Domain.name).filter(Domain.id == web_directory.domain_id)
     else:
-        ip_query = sql.select(IpAddress.address).filter(
+        query = sql.select(IpAddress.address).filter(
             IpAddress.id == web_directory.ip_id
         )
-        return manager.session.execute(ip_query).scalar_one()
+    return manager.session.execute(query).scalar_one()
+
+
+def _dispatch_event(
+    event_name: str, data: dict[str, Any], *, manager: LangdonManager
+) -> None:
+    event = manager.get_event_by_name(event_name)(**data)
+    message_broker.dispatch_event(event, manager=manager)
 
 
 def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) -> None:
-    cleaned_hostname = _clean_hostname(web_directory, manager=manager)
+    cleaned_hostname = _get_domain_or_ip_name(web_directory, manager=manager)
     cleaned_directory_path = web_directory.path.lstrip("/")
-    artifact_directory = pathlib.Path(
-        f"{manager.config['web_directories_artifacts']}/{cleaned_hostname}/"
-        f"{cleaned_directory_path}"
-    )
-    httpx_file_name = f"get_{uuid.uuid4()}.httpx"
-
     cleaned_url = _build_cleaned_url(
         web_directory, cleaned_hostname, cleaned_directory_path
     )
 
-    _download_httpx_file(
-        cleaned_url, artifact_directory, httpx_file_name, web_directory, manager
-    )
-
     _analyze_with_whatweb(cleaned_url, web_directory, manager)
+    _run_webanalyze(cleaned_url, web_directory, manager=manager)
+    _take_screenshot(cleaned_url, web_directory, manager=manager)
 
 
 def _build_cleaned_url(
@@ -69,70 +71,96 @@ def _build_cleaned_url(
     )
 
 
-def _download_httpx_file(
-    cleaned_url: str,
-    artifact_directory: pathlib.Path,
-    httpx_file_name: str,
-    web_directory: WebDirectory,
-    manager: LangdonManager,
-) -> None:
-    throttler.wait_for_slot(f"throttle_{cleaned_url}", manager=manager)
-    user_agent = manager.config["user_agent"]
-    artifact_directory.mkdir(parents=True, exist_ok=True)
-
-    with (
-        suppress_timeout_expired_error(),
-        suppress_called_process_error(),
-        suppress_duplicated_recon_process(),
-        internal_shell_command_execution_context(
-            CommandData(
-                command="httpx",
-                args=f"{cleaned_url} --headers 'User-Agent' '{user_agent}' --download "
-                f"{artifact_directory / httpx_file_name!s}",
-            ),
-            manager=manager,
-            timeout=300,
-        ) as _,
-    ):
-        if not pathlib.Path(artifact_directory / httpx_file_name).exists():
-            return logger.info("No response body found for %s", cleaned_url)
-
-        md5_hasher = hashlib.md5()
-        md5_hasher.update(
-            pathlib.Path(artifact_directory / httpx_file_name).read_bytes()
-        )
-        message_broker.dispatch_event(
-            manager.get_event_by_name("WebDirectoryResponseDiscovered")(
-                directory=web_directory,
-                response_hash=md5_hasher.hexdigest(),
-                response_path=artifact_directory / httpx_file_name,
-            ),
-            manager=manager,
-        )
-
-
 def _analyze_with_whatweb(
     cleaned_url: str, web_directory: WebDirectory, manager: LangdonManager
 ) -> None:
+    domain_name = urllib.parse.urlparse(cleaned_url).netloc
     user_agent = manager.config["user_agent"]
-
-    throttler.wait_for_slot(f"throttle_{cleaned_url}", manager=manager)
+    throttler.wait_for_slot(f"throttle_{domain_name}")
+    command_data = CommandData(
+        "whatweb",
+        f'--user-agent "{user_agent}" --colour never --quiet --max-threads 1 '
+        f"--wait 5 --log-json /dev/stdout {cleaned_url}",
+    )
 
     with (
         suppress_duplicated_recon_process(),
-        shell_command_execution_context(
-            CommandData(
-                command="whatweb",
-                args=f'--user-agent "{user_agent}" --colour never --quiet --max-threads 1 '
-                f"--wait 5 --log-json /dev/stdout {cleaned_url}",
-            ),
-            manager=manager,
-        ) as output,
+        shell_command_execution_context(command_data, manager=manager) as output,
     ):
-        item: dict[str, Any]
         for item in json.loads(output):
             _process_uncommon_headers(item, web_directory, manager=manager)
             _process_cookies(item, web_directory, manager=manager)
+
+
+def _run_webanalyze(
+    cleaned_url: str, web_directory: WebDirectory, *, manager: LangdonManager
+) -> None:
+    domain_name = _get_domain_or_ip_name(web_directory, manager=manager)
+    throttler.wait_for_slot(f"throttle_{domain_name}")
+    command_data = CommandData(
+        "webanalyze", f"-worker 1 -host {cleaned_url} -output csv"
+    )
+
+    with (
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(command_data, manager=manager) as output,
+        tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file,
+    ):
+        cleaned_output = "\n".join(
+            line.strip() for line in output.splitlines() if line.strip()
+        )
+        temp_file.write(cleaned_output)
+        temp_file.flush()
+        temp_file.seek(0)
+
+        reader = csv.DictReader(temp_file)
+        for row in reader:
+            _dispatch_event(
+                "TechnologyDiscovered",
+                {
+                    "name": row["App"],
+                    "version": row["Version"].strip()
+                    if row["Version"].strip()
+                    else None,
+                    "directory": web_directory,
+                },
+                manager=manager,
+            )
+
+
+def _take_screenshot(
+    cleaned_url: str, web_directory: WebDirectory, *, manager: LangdonManager
+) -> None:
+    domain_name = _get_domain_or_ip_name(web_directory, manager=manager)
+    cleaned_directory_path = urllib.parse.urlparse(cleaned_url).path.lstrip("/")
+    gowitness_destination_dir = pathlib.Path(
+        os.path.join(
+            manager.config["web_directory_screenshots"],
+            domain_name,
+            cleaned_directory_path,
+        )
+    )
+    gowitness_destination_dir.mkdir(parents=True, exist_ok=True)
+
+    throttler.wait_for_slot(f"throttle_{domain_name}")
+    command_data = CommandData(
+        "gowitness",
+        f"gowitness scan single -u {cleaned_url} --screenshot-fullpage -s {gowitness_destination_dir!s}",
+    )
+
+    with (
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(command_data, manager=manager),
+    ):
+        jpeg_files = glob.glob(os.path.join(f"{gowitness_destination_dir!s}", "*.jpeg"))
+        if jpeg_files:
+            latest_jpeg = max(jpeg_files, key=os.path.getmtime)
+            create_if_not_exist(
+                WebDirectoryScreenshot,
+                web_directory_response_id=web_directory.id,
+                defaults={"screenshot_path": pathlib.Path(latest_jpeg)},
+                manager=manager,
+            )
 
 
 def _process_uncommon_headers(

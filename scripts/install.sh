@@ -66,7 +66,6 @@ go install github.com/tomnomnom/assetfinder@latest
 go install github.com/lc/gau/v2/cmd/gau@latest
 go install github.com/OJ/gobuster/v3@latest
 go install github.com/sensepost/gowitness@latest
-go install github.com/projectdiscovery/httpx/cmd/httpx@latest
 go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 go install github.com/owasp-amass/amass/v4/...@master
 CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
@@ -124,7 +123,6 @@ cd $HOME
 git clone https://github.com/xlurio/langdon.git
 pip install --user poetry
 poetry install -C "$HOME/langdon"
-rm "$HOME/.local/bin/httpx" # Causes conflict with the go version
 
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
