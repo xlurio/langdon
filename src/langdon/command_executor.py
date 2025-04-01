@@ -53,11 +53,13 @@ def _try_to_execute_command(
             if isinstance(exception.stderr, bytes)
             else "unknown"
         )
-
-        raise LangdonException(
+        error_message = (
             f"Command '{command.command}' with args '{command.args}' failed with code "
             f"{exception.returncode}: {cleaned_stderr}"
-        ) from exception
+        )
+
+        logger.debug(error_message, exc_info=True)
+        raise LangdonException(error_message) from exception
 
 
 @contextlib.contextmanager

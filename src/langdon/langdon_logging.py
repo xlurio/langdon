@@ -18,7 +18,7 @@ logger.addHandler(_handler)
 def new_excepthook(
     exc_type: type[Exception], exc_value: Exception, traceback: TracebackType
 ):
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, traceback))
+    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, traceback))
 
 
 sys.excepthook = new_excepthook
