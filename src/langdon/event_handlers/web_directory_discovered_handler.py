@@ -91,7 +91,7 @@ def _download_httpx_file(
                 f"{artifact_directory / httpx_file_name!s}",
             ),
             manager=manager,
-            timeout=10,
+            timeout=300,
         ) as _,
     ):
         if not pathlib.Path(artifact_directory / httpx_file_name).exists():
