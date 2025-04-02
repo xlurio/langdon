@@ -40,6 +40,10 @@ def _dispatch_web_directory_discovered(
 ) -> None:
     for url in urls:
         url_parsed = urllib.parse.urlparse(url)
+
+        if not url_parsed.netloc:
+            return
+
         domain_name = url_parsed.netloc.split(":")[0]
 
         message_broker.dispatch_event(
@@ -75,8 +79,8 @@ def _enumerate_web_directories(
         shell_command_execution_context(
             CommandData(
                 command="gau",
-                args="--blacklist png,jpg,gif,ttf,woff --fp --json "
-                f"{cleaned_host_name}",
+                args="--blacklist png,jpg,gif,ttf,woff --fp "
+                f"--proxy socks5://localhost:9050 {cleaned_host_name}",
             ),
             manager=manager,
         ) as output,
