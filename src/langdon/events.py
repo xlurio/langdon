@@ -32,6 +32,14 @@ class TechnologyDiscovered(Event):
     directory: WebDirectory | None = None
     port: UsedPort | None = None
 
+    @pydantic.field_validator("name")
+    @classmethod
+    def validate_technology_name(cls, value: str):
+        if value == "None":
+            raise ValueError("Invalid technology name")
+
+        return value
+
 
 @register_event
 class DomainDiscovered(Event):
