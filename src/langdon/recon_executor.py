@@ -52,10 +52,10 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
         temp_file.seek(0)
 
         _process_amass_for_domains(known_domains_names, manager)
-        _process_subfinder(temp_file.name, manager)
+        manager.submit_task(_process_subfinder, temp_file.name, manager)
         _process_assetfinder(known_domains_names, manager)
 
-    manager.wait_for_pending_tasks()
+        manager.wait_for_pending_tasks()
 
 
 def _process_amass_for_domain(domain: str) -> None:
