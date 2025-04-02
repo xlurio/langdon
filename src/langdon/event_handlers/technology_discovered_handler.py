@@ -52,7 +52,7 @@ def _enumerate_vulnerabilities(
 
 
 def handle_event(event: TechnologyDiscovered, *, manager: LangdonManager) -> None:
-    already_existed = _handle_technology_creation(event, manager)
+    _handle_technology_creation(event, manager)
     technology = _fetch_technology(event, manager)
 
     if event.directory is not None:
