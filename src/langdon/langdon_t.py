@@ -10,6 +10,5 @@ ConfigurationKeyT = Literal[
     "log_file",
     "resolvers_file",
     "user_agent",
-    "web_directories_artifacts",
     "web_directory_screenshots",
 ]

@@ -34,9 +34,6 @@ def initialize(args: InitNamespace) -> None:
 
     database_path = cleaned_directory / "langdon.db"
 
-    web_directories_artifacts = cleaned_directory / "web_directories"
-    web_directories_artifacts.mkdir(parents=True, exist_ok=True)
-
     web_directory_screenshots = cleaned_directory / "web_screenshots"
     web_directory_screenshots.mkdir(parents=True, exist_ok=True)
 
@@ -53,7 +50,6 @@ def initialize(args: InitNamespace) -> None:
             "langdon": {
                 "cache_file": str(cache_file),
                 "database": str(database_path),
-                "web_directories_artifacts": str(web_directories_artifacts),
                 "web_directory_screenshots": str(web_directory_screenshots),
                 "log_file": str(cleaned_directory / "langdon.log"),
                 "downloaded_apks_dir": str(downloaded_apks_dir),
