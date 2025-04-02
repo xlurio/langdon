@@ -145,7 +145,7 @@ def _take_screenshot(
     throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
     command_data = CommandData(
         command="gowitness",
-        args=f"gowitness scan single -u {cleaned_url} --screenshot-fullpage -s "
+        args=f"scan single -u {cleaned_url} --screenshot-fullpage -s "
         f"{gowitness_destination_dir!s}",
     )
 
