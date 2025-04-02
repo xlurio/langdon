@@ -123,6 +123,9 @@ def _enumerate_web_directories(
         temp_file.seek(0)
         reader = csv.DictReader(temp_file)
         for row in reader:
+            if row["firewall"] == "None":
+                continue
+
             message_broker.dispatch_event(
                 manager.get_event_by_name("TechnologyDiscovered")(
                     name=row["firewall"],
