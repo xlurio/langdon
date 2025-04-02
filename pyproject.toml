@@ -1,6 +1,6 @@
 [project]
 name = "langdon"
-version = "0.1.0-prealpha.0"
+version = "0.1.0-prealpha"
 description = "Tool for target applications reconnaissance"
 authors = [
     {name = "Lucas Calegario"}
