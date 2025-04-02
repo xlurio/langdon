@@ -119,6 +119,8 @@ def _enumerate_web_directories(
         ) as output,
     ):
         temp_file.seek(0)
+        logger.debug("Wafw00f CSV: %s", temp_file.read())
+        temp_file.seek(0)
         reader = csv.DictReader(temp_file)
         for row in reader:
             message_broker.dispatch_event(
