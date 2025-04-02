@@ -15,6 +15,7 @@ from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
     suppress_duplicated_recon_process,
+    suppress_timeout_expired_error,
 )
 from langdon.events import DomainDiscovered, IpAddressDiscovered, WebDirectoryDiscovered
 from langdon.exceptions import LangdonProgrammingError
@@ -64,6 +65,7 @@ def _process_amass_for_domain(domain: str) -> None:
     )
     with (
         LangdonManager() as manager,
+        suppress_timeout_expired_error(),
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
             CommandData(command="amass", args=f"enum -d {domain}"),
