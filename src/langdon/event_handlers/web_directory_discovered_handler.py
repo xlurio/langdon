@@ -76,7 +76,7 @@ def _analyze_with_whatweb(
 ) -> None:
     domain_name = urllib.parse.urlparse(cleaned_url).netloc
     user_agent = manager.config["user_agent"]
-    throttler.wait_for_slot(f"throttle_{domain_name}")
+    throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
     command_data = CommandData(
         "whatweb",
         f'--user-agent "{user_agent}" --colour never --quiet --max-threads 1 '
@@ -96,7 +96,7 @@ def _run_webanalyze(
     cleaned_url: str, web_directory: WebDirectory, *, manager: LangdonManager
 ) -> None:
     domain_name = _get_domain_or_ip_name(web_directory, manager=manager)
-    throttler.wait_for_slot(f"throttle_{domain_name}")
+    throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
     command_data = CommandData(
         "webanalyze", f"-worker 1 -host {cleaned_url} -output csv"
     )
@@ -142,7 +142,7 @@ def _take_screenshot(
     )
     gowitness_destination_dir.mkdir(parents=True, exist_ok=True)
 
-    throttler.wait_for_slot(f"throttle_{domain_name}")
+    throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
     command_data = CommandData(
         "gowitness",
         f"gowitness scan single -u {cleaned_url} --screenshot-fullpage -s {gowitness_destination_dir!s}",
