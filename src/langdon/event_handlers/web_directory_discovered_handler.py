@@ -78,8 +78,8 @@ def _analyze_with_whatweb(
     user_agent = manager.config["user_agent"]
     throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
     command_data = CommandData(
-        "whatweb",
-        f'--user-agent "{user_agent}" --colour never --quiet --max-threads 1 '
+        command="whatweb",
+        args=f'--user-agent "{user_agent}" --colour never --quiet --max-threads 1 '
         f"--wait 5 --log-json /dev/stdout {cleaned_url}",
     )
 
@@ -98,7 +98,7 @@ def _run_webanalyze(
     domain_name = _get_domain_or_ip_name(web_directory, manager=manager)
     throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
     command_data = CommandData(
-        "webanalyze", f"-worker 1 -host {cleaned_url} -output csv"
+        command="webanalyze", args=f"-worker 1 -host {cleaned_url} -output csv"
     )
 
     with (
@@ -144,8 +144,9 @@ def _take_screenshot(
 
     throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
     command_data = CommandData(
-        "gowitness",
-        f"gowitness scan single -u {cleaned_url} --screenshot-fullpage -s {gowitness_destination_dir!s}",
+        command="gowitness",
+        args=f"gowitness scan single -u {cleaned_url} --screenshot-fullpage -s "
+        f"{gowitness_destination_dir!s}",
     )
 
     with (
