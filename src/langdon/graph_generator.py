@@ -7,6 +7,7 @@ import graphviz
 from sqlalchemy import sql
 
 from langdon.models import (
+    DirCookieRel,
     DirHeaderRel,
     Domain,
     HttpCookie,
@@ -113,15 +114,15 @@ def add_dir_cookie_relationships(
     dot: graphviz.Digraph, manager: LangdonManager
 ) -> None:
     dir_cookie_rel_query = (
-        sql.select(DirHeaderRel).join(DirHeaderRel.directory).join(DirHeaderRel.header)
+        sql.select(DirCookieRel).join(DirCookieRel.directory).join(DirCookieRel.cookie)
     )
     for dir_cookie_rel in manager.session.scalars(dir_cookie_rel_query):
-        dot.edge(dir_cookie_rel.directory.path, dir_cookie_rel.header.name)
+        dot.edge(dir_cookie_rel.directory.path, dir_cookie_rel.cookie.name)
 
 
 def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
-    used_ports_query = sql.select(UsedPort).join(WebDirectory.domain).join(
-        UsedPort.ip_address
+    used_ports_query = (
+        sql.select(UsedPort).join(WebDirectory.domain).join(UsedPort.ip_address)
     )
     for used_port in manager.session.scalars(used_ports_query):
         dot.node(str(used_port.port), shape="diamond")
