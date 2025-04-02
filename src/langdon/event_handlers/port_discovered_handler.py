@@ -112,7 +112,7 @@ def _enumerate_web_directories(
         shell_command_execution_context(
             CommandData(
                 command="wafw00f",
-                args=f"-f csv -o {temp_file} -p socks5://localhost:9050 --no-colors "
+                args=f"-f csv -o {temp_file.name} -p socks5://localhost:9050 --no-colors "
                 f"{'https' if event.port == 443 else 'http'}://{cleaned_host_name}",
             ),
             manager=manager,
