@@ -58,6 +58,9 @@ class IpAddress(SqlAlchemyModel):
     ports: orm.Mapped[list[UsedPort]] = orm.relationship(
         back_populates="ip_address", cascade="all, delete-orphan"
     )
+    web_directories: orm.Mapped[list[WebDirectory]] = orm.relationship(
+        back_populates="ip_address", cascade="all, delete-orphan"
+    )
 
 
 class IpDomainRel(SqlAlchemyModel):
@@ -94,6 +97,9 @@ class WebDirectory(SqlAlchemyModel):
     )
     ip_id: orm.Mapped[int | None] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_ipaddresses.id"), nullable=True
+    )
+    ip_address: orm.Mapped[IpAddress | None] = orm.relationship(
+        back_populates="web_directories"
     )
     uses_ssl: orm.Mapped[bool]
     technologies: orm.Mapped[list[WebDirTechRel]] = orm.relationship(

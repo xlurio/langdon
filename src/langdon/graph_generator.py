@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import urllib.parse
 from typing import TYPE_CHECKING
 
 import graphviz
@@ -61,6 +62,17 @@ def generate_graph(
     )
 
 
+def _make_web_directory_node_name(directory: WebDirectory) -> str:
+    schema = "https" if directory.uses_ssl else "http"
+    cleaned_hostname = (
+        directory.domain.name if directory.domain else directory.ip_address.address
+    )
+    cleaned_directory_path = directory.path.lstrip("/")
+    urllib.parse.urlunparse(
+        (schema, cleaned_hostname, cleaned_directory_path, "", "", "")
+    )
+
+
 def add_domains(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     domains_query = sql.select(Domain)
     for domain in manager.session.scalars(domains_query):
@@ -82,10 +94,22 @@ def add_ip_domain_relationships(dot: graphviz.Digraph, manager: LangdonManager) 
 
 
 def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
-    web_directories_query = sql.select(WebDirectory).join(WebDirectory.domain)
+    web_directories_query = (
+        sql.select(WebDirectory).join(WebDirectory.domain).join(WebDirectory.ip_address)
+    )
+
     for web_directory in manager.session.scalars(web_directories_query):
-        dot.node(web_directory.path, shape="note")
-        dot.edge(web_directory.domain.name, web_directory.path)
+        dot.node(_make_web_directory_node_name(web_directory), shape="note")
+
+        if web_directory.domain:
+            dot.edge(
+                web_directory.domain.name, _make_web_directory_node_name(web_directory)
+            )
+        else:
+            dot.edge(
+                web_directory.ip_address.address,
+                _make_web_directory_node_name(web_directory),
+            )
 
 
 def add_http_headers(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -98,10 +122,17 @@ def add_dir_header_relationships(
     dot: graphviz.Digraph, manager: LangdonManager
 ) -> None:
     dir_header_rel_query = (
-        sql.select(DirHeaderRel).join(DirHeaderRel.directory).join(DirHeaderRel.header)
+        sql.select(DirHeaderRel)
+        .join(DirHeaderRel.directory)
+        .join(WebDirectory.domain)
+        .join(WebDirectory.ip_address)
+        .join(DirHeaderRel.header)
     )
     for dir_header_rel in manager.session.scalars(dir_header_rel_query):
-        dot.edge(dir_header_rel.directory.path, dir_header_rel.header.name)
+        dot.edge(
+            _make_web_directory_node_name(dir_header_rel.directory),
+            dir_header_rel.header.name,
+        )
 
 
 def add_http_cookies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -114,10 +145,17 @@ def add_dir_cookie_relationships(
     dot: graphviz.Digraph, manager: LangdonManager
 ) -> None:
     dir_cookie_rel_query = (
-        sql.select(DirCookieRel).join(DirCookieRel.directory).join(DirCookieRel.cookie)
+        sql.select(DirCookieRel)
+        .join(DirCookieRel.directory)
+        .join(WebDirectory.domain)
+        .join(WebDirectory.ip_address)
+        .join(DirCookieRel.cookie)
     )
     for dir_cookie_rel in manager.session.scalars(dir_cookie_rel_query):
-        dot.edge(dir_cookie_rel.directory.path, dir_cookie_rel.cookie.name)
+        dot.edge(
+            _make_web_directory_node_name(dir_cookie_rel.directory),
+            dir_cookie_rel.cookie.name,
+        )
 
 
 def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -151,11 +189,13 @@ def add_web_dir_tech_relationships(
     web_dir_tech_rel_query = (
         sql.select(WebDirTechRel)
         .join(WebDirTechRel.directory)
+        .join(WebDirectory.domain)
+        .join(WebDirectory.ip_address)
         .join(WebDirTechRel.technology)
     )
     for web_dir_tech_rel in manager.session.scalars(web_dir_tech_rel_query):
         dot.edge(
-            web_dir_tech_rel.directory.path,
+            _make_web_directory_node_name(web_dir_tech_rel.directory),
             f"{web_dir_tech_rel.technology.name} {web_dir_tech_rel.technology.version or ''}",
         )
 
