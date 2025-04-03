@@ -31,7 +31,10 @@ class DataFileManagerABC(abc.ABC, Generic[T]):
     def read_data_file(self) -> T:
         with self.__process_queue_lock, self.__thread_queue_lock:
             try:
-                return json.loads(self.__data_file_path.read_text())
+                return (
+                    json.loads(self.__data_file_path.read_text())
+                    or self.get_default_file_initial_value()
+                )
 
             except json.JSONDecodeError:
                 logger.warning(
