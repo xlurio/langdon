@@ -35,11 +35,7 @@ def run():
     if is_initializing:
         return initializer.initialize(parsed_args)
 
-    with (
-        task_queue.task_queue_context(),
-        event_listener.event_listener_context(),
-        LangdonManager() as manager,
-    ):
+    with LangdonManager() as manager:
         log_file_handler = logging.FileHandler(manager.config["log_file"])
 
         with task_queue.task_queue_context(), event_listener.event_listener_context():
