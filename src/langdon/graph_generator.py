@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import re
 import urllib.parse
+from itertools import cycle
 from typing import TYPE_CHECKING
 
 import graphviz
@@ -32,6 +33,16 @@ if TYPE_CHECKING:
 
 class GraphGeneratorNamespace(argparse.Namespace):
     output: Path
+
+
+COLORS = cycle(["red", "blue", "green", "orange", "purple", "brown", "pink", "yellow"])
+
+NODE_COLORS = {}
+
+def _get_node_color(node_id: str) -> str:
+    if node_id not in NODE_COLORS:
+        NODE_COLORS[node_id] = next(COLORS)
+    return NODE_COLORS[node_id]
 
 
 def generate_graph(
@@ -84,13 +95,15 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
 def add_domains(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     domains_query = sql.select(Domain)
     for domain in manager.session.scalars(domains_query):
-        dot.node(domain.name, shape="box")
+        color = _get_node_color(domain.name)
+        dot.node(domain.name, shape="box", color=color, fontcolor=color)
 
 
 def add_ip_addresses(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     ip_address_query = sql.select(IpAddress)
     for ip_address in manager.session.scalars(ip_address_query):
-        dot.node(ip_address.address, label=ip_address.address, shape="ellipse")
+        color = _get_node_color(ip_address.address)
+        dot.node(ip_address.address, label=ip_address.address, shape="ellipse", color=color, fontcolor=color)
 
 
 def add_ip_domain_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -98,7 +111,8 @@ def add_ip_domain_relationships(dot: graphviz.Digraph, manager: LangdonManager) 
         sql.select(IpDomainRel).join(IpDomainRel.domain).join(IpDomainRel.ip_address)
     )
     for ip_domain_rel in manager.session.scalars(ip_address_domain_rel_query):
-        dot.edge(ip_domain_rel.ip_address.address, ip_domain_rel.domain.name)
+        color = _get_node_color(ip_domain_rel.ip_address.address)
+        dot.edge(ip_domain_rel.ip_address.address, ip_domain_rel.domain.name, color=color)
 
 
 def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -109,17 +123,14 @@ def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     )
 
     for web_directory in manager.session.scalars(web_directories_query):
-        dot.node(_make_web_directory_node_name(web_directory), shape="note")
+        node_name = _make_web_directory_node_name(web_directory)
+        color = _get_node_color(node_name)
+        dot.node(node_name, shape="note", color=color, fontcolor=color)
 
         if web_directory.domain:
-            dot.edge(
-                web_directory.domain.name, _make_web_directory_node_name(web_directory)
-            )
+            dot.edge(web_directory.domain.name, node_name, color=color)
         else:
-            dot.edge(
-                web_directory.ip_address.address,
-                _make_web_directory_node_name(web_directory),
-            )
+            dot.edge(web_directory.ip_address.address, node_name, color=color)
 
 
 def add_http_headers(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -139,9 +150,11 @@ def add_dir_header_relationships(
         .join(DirHeaderRel.header)
     )
     for dir_header_rel in manager.session.scalars(dir_header_rel_query):
+        color = _get_node_color(_make_web_directory_node_name(dir_header_rel.directory))
         dot.edge(
             _make_web_directory_node_name(dir_header_rel.directory),
             dir_header_rel.header.name,
+            color=color,
         )
 
 
@@ -162,9 +175,11 @@ def add_dir_cookie_relationships(
         .join(DirCookieRel.cookie)
     )
     for dir_cookie_rel in manager.session.scalars(dir_cookie_rel_query):
+        color = _get_node_color(_make_web_directory_node_name(dir_cookie_rel.directory))
         dot.edge(
             _make_web_directory_node_name(dir_cookie_rel.directory),
             dir_cookie_rel.cookie.name,
+            color=color,
         )
 
 
@@ -217,7 +232,9 @@ def add_port_tech_relationships(dot: graphviz.Digraph, manager: LangdonManager) 
         sql.select(PortTechRel).join(PortTechRel.port).join(PortTechRel.technology)
     )
     for port_tech_rel in manager.session.scalars(port_tech_rel_query):
+        color = _get_node_color(str(port_tech_rel.port.port))
         dot.edge(
             str(port_tech_rel.port.port),
             f"{port_tech_rel.technology.name} {port_tech_rel.technology.version or ''}",
+            color=color,
         )
