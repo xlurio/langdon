@@ -41,7 +41,10 @@ def generate_graph(
     Generate a graph of the known assets using the Graphviz library.
     """
     dot = graphviz.Digraph(
-        name="langdon_graph", engine="fdp", strict=True, graph_attr={"splines": "true"}
+        name="langdon_graph",
+        engine="fdp",
+        strict=True,
+        graph_attr={"concentrate": "true", "splines": "true"},
     )
 
     add_domains(dot, manager)
