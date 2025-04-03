@@ -4,6 +4,7 @@ import concurrent.futures as CF
 import contextlib
 import multiprocessing
 import os
+import random
 import time
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -145,6 +146,19 @@ def event_listener_context() -> Iterator[None]:
     finally:
         process.terminate()
         process.join()
+
+
+def wait_for_all_events_to_be_handled(*, manager: LangdonManager) -> None:
+    """Wait for all events to be handled."""
+    event_queue_manager = EventListenerQueueManager(manager=manager)
+    is_event_queue_empty = False
+
+    while is_event_queue_empty:
+        queue = list(*event_queue_manager.read_data_file(manager=manager))
+        is_event_queue_empty = not queue
+
+        if not is_event_queue_empty:
+            time.sleep(random.randint(1, 3))
 
 
 def send_event_message(event: T, *, manager: LangdonManager) -> None:

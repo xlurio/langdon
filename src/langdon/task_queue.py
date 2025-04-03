@@ -5,6 +5,7 @@ import contextlib
 import json
 import multiprocessing
 import os
+import random
 import time
 from collections.abc import Callable, Iterator, Sequence
 from typing import TypedDict
@@ -93,6 +94,25 @@ def process_tasks(
             executor.submit(func, *args, **kwargs)
 
         file_manager.write_data_file([])
+
+
+def wait_for_all_tasks_to_finish(*, manager: LangdonManager) -> None:
+    """
+    Wait for all tasks in the queue to finish.
+
+    Args:
+        manager (LangdonManager): The LangdonManager instance.
+        timeout (int): The maximum time to wait for tasks to finish.
+    """
+    file_manager = TaskQueueFileManager(manager)
+    is_task_queue_empty = False
+
+    while not is_task_queue_empty:
+        tasks = file_manager.read_data_file()
+        is_task_queue_empty = not tasks
+
+        if not is_task_queue_empty:
+            time.sleep(random.randint(1, 3))
 
 
 @contextlib.contextmanager
