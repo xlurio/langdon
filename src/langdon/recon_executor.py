@@ -81,6 +81,9 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
         task_queue.submit_task(_process_subfinder, temp_file.name, manager=manager)
         _process_assetfinder_for_domains(known_domains_names, manager)
 
+    task_queue.wait_for_all_tasks_to_finish(manager=manager)
+    event_listener.wait_for_all_events_to_be_handled(manager=manager)
+
 
 def _process_amass_for_domain(domain: str) -> None:
     amass_domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)*[^.\s]+) \(FQDN\)")

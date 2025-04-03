@@ -150,6 +150,8 @@ def event_listener_context() -> Iterator[None]:
 
 def wait_for_all_events_to_be_handled(*, manager: LangdonManager) -> None:
     """Wait for all events to be handled."""
+    logger.debug("Waiting for all events to be handled")
+
     event_queue_manager = EventListenerQueueManager(manager=manager)
     is_event_queue_empty = False
 

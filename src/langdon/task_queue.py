@@ -104,6 +104,8 @@ def wait_for_all_tasks_to_finish(*, manager: LangdonManager) -> None:
         manager (LangdonManager): The LangdonManager instance.
         timeout (int): The maximum time to wait for tasks to finish.
     """
+    logger.debug("Waiting for all tasks to finish")
+
     file_manager = TaskQueueFileManager(manager)
     is_task_queue_empty = False
 
