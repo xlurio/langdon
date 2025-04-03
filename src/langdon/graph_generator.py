@@ -135,14 +135,15 @@ def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 
     for web_directory in manager.session.scalars(web_directories_query):
         node_name = _make_web_directory_node_name(web_directory)
-        dot.node(node_name, shape="note", color=color, fontcolor=color)
+        dir_color = _get_node_color(node_name)
+        dot.node(node_name, shape="note", color=dir_color, fontcolor=dir_color)
 
         if web_directory.domain:
-            color = _get_node_color(web_directory.domain.name)
-            dot.edge(web_directory.domain.name, node_name, color=color)
+            domain_color = _get_node_color(web_directory.domain.name)
+            dot.edge(web_directory.domain.name, node_name, color=domain_color)
         else:
-            color = _get_node_color(web_directory.ip_address.address)
-            dot.edge(web_directory.ip_address.address, node_name, color=color)
+            ip_color = _get_node_color(web_directory.ip_address.address)
+            dot.edge(web_directory.ip_address.address, node_name, color=ip_color)
 
 
 def add_http_headers(dot: graphviz.Digraph, manager: LangdonManager) -> None:
