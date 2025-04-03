@@ -21,7 +21,7 @@ def _read_cache_data(*, manager: LangdonManager) -> dict[str, float]:
         return json.loads(pathlib.Path(cache_file).read_text())
 
     except json.JSONDecodeError:
-        logger.debug("The cache file is empty or corrupted")
+        logger.warning("The cache file is empty or corrupted")
         return {}
 
     except FileNotFoundError:
