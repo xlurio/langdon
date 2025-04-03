@@ -125,8 +125,11 @@ def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
         sql.select(UsedPort).join(WebDirectory.domain).join(UsedPort.ip_address)
     )
     for used_port in manager.session.scalars(used_ports_query):
-        dot.node(str(used_port.port), shape="diamond")
-        dot.edge(str(used_port.port), used_port.ip_address.address)
+        dot.node(f"{used_port.ip_address.address}:{used_port.port}", shape="diamond")
+        dot.edge(
+            f"{used_port.ip_address.address}:{used_port.port}",
+            used_port.ip_address.address,
+        )
 
 
 def add_technologies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -162,10 +165,13 @@ def add_web_dir_tech_relationships(
 
 def add_port_tech_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     port_tech_rel_query = (
-        sql.select(PortTechRel).join(PortTechRel.port).join(PortTechRel.technology)
+        sql.select(PortTechRel)
+        .join(PortTechRel.port)
+        .join(UsedPort.ip_address)
+        .join(PortTechRel.technology)
     )
     for port_tech_rel in manager.session.scalars(port_tech_rel_query):
         dot.edge(
-            str(port_tech_rel.port.port),
+            f"{port_tech_rel.port.ip_address.address}:{port_tech_rel.port.port}",
             f"{port_tech_rel.technology.name} {port_tech_rel.technology.version or ''}",
         )
