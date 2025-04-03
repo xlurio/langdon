@@ -166,10 +166,10 @@ def _process_assetfinder_for_domain(domain_name: str) -> None:
             manager=manager,
         ) as output,
     ):
-        for domain_name in output.splitlines():
-            if domain_name:
+        for discovered_domain_name in output.splitlines():
+            if discovered_domain_name:
                 event_listener.send_event_message(
-                    DomainDiscovered(name=domain_name), manager=manager
+                    DomainDiscovered(name=discovered_domain_name), manager=manager
                 )
 
 
