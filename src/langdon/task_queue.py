@@ -61,6 +61,8 @@ def start_task_executor() -> None:
                 process_tasks(file_manager, executor)
             except KeyboardInterrupt:
                 break
+            
+            time.sleep(1)
 
 
 def process_tasks(
