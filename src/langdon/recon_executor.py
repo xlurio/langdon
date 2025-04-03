@@ -14,6 +14,7 @@ from langdon import event_listener, task_queue
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
+    suppress_called_process_error,
     suppress_duplicated_recon_process,
     suppress_timeout_expired_error,
 )
@@ -51,6 +52,7 @@ def _get_ip_from_known_domains() -> None:
         for domain in known_domains:
             with (
                 suppress_timeout_expired_error(),
+                suppress_called_process_error(),
                 suppress_duplicated_recon_process(),
                 shell_command_execution_context(
                     CommandData(command="host", args=domain.name),

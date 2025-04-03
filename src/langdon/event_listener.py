@@ -111,9 +111,12 @@ def _process_event_queue(
     if not queue:
         return
 
-    for event_data in queue:
-        executor.submit(_handle_event_message, event_data)
+    futures = []
 
+    for event_data in queue:
+        futures.append(executor.submit(_handle_event_message, event_data))
+
+    CF.wait(futures)
     manager.write_data_file([])
 
 

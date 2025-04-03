@@ -82,6 +82,8 @@ def process_tasks(
     tasks = file_manager.read_data_file()
 
     if tasks:
+        futures = []
+
         for task in tasks:
             func_name = task["func"]
             args = task["args"]
@@ -91,8 +93,9 @@ def process_tasks(
             module = __import__(module_name, fromlist=[func_name])
             func = getattr(module, func_name)
 
-            executor.submit(func, *args, **kwargs)
+            futures.append(executor.submit(func, *args, **kwargs))
 
+        CF.wait(futures)
         file_manager.write_data_file([])
 
 
