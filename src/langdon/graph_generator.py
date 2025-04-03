@@ -40,7 +40,9 @@ def generate_graph(
     """
     Generate a graph of the known assets using the Graphviz library.
     """
-    dot = graphviz.Digraph(name="langdon_graph", engine="fdp", strict=True)
+    dot = graphviz.Digraph(
+        name="langdon_graph", engine="fdp", strict=True, graph_attr={"splines": "ortho"}
+    )
 
     add_domains(dot, manager)
     add_ip_addresses(dot, manager)
@@ -165,7 +167,9 @@ def add_dir_cookie_relationships(
 
 def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     used_ports_query = (
-        sql.select(UsedPort).join(WebDirectory.domain, isouter=True).join(UsedPort.ip_address)
+        sql.select(UsedPort)
+        .join(WebDirectory.domain, isouter=True)
+        .join(UsedPort.ip_address)
     )
     for used_port in manager.session.scalars(used_ports_query):
         dot.node(str(used_port.port), shape="diamond")
