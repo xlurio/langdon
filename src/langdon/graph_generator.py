@@ -38,7 +38,7 @@ def generate_graph(
     """
     Generate a graph of the known assets using the Graphviz library.
     """
-    dot = graphviz.Digraph(name="langdon_graph")
+    dot = graphviz.Digraph(name="langdon_graph", strict=True)
 
     add_domains(dot, manager)
     add_ip_addresses(dot, manager)
@@ -129,6 +129,7 @@ def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
         dot.edge(
             f"{used_port.ip_address.address}-{used_port.port}",
             used_port.ip_address.address,
+
         )
 
 
