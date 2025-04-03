@@ -56,9 +56,14 @@ def generate_graph(
     """
     dot = graphviz.Digraph(
         name="langdon_graph",
-        engine="fdp",
+        engine="sfdp",
         strict=True,
-        graph_attr={"concentrate": "true", "splines": "true"},
+        graph_attr={
+            "concentrate": "true",
+            "mode": "sgd",
+            "overlap": "prism",
+            "splines": "true",
+        },
     )
 
     add_domains(dot, manager)
@@ -88,14 +93,16 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
         directory.domain.name if directory.domain else directory.ip_address.address
     )
     cleaned_directory_path = directory.path.lstrip("/")
-    parsed_url = urllib.parse.urlunparse((
-        schema,
-        cleaned_hostname,
-        cleaned_directory_path,
-        "",
-        "",
-        "",
-    ))
+    parsed_url = urllib.parse.urlunparse(
+        (
+            schema,
+            cleaned_hostname,
+            cleaned_directory_path,
+            "",
+            "",
+            "",
+        )
+    )
 
     return re.sub(r"[^a-zA-Z0-9]", "_", parsed_url)
 
