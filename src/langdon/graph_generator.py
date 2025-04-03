@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import random
 import re
 import urllib.parse
-from itertools import cycle
 from typing import TYPE_CHECKING
 
 import graphviz
@@ -35,13 +35,16 @@ class GraphGeneratorNamespace(argparse.Namespace):
     output: Path
 
 
-COLORS = cycle(["red", "blue", "green", "orange", "purple", "brown", "pink", "yellow"])
+def _generate_random_color() -> str:
+    return f"{random.random()} {random.random()} {random.random()}"
+
 
 NODE_COLORS = {}
 
+
 def _get_node_color(node_id: str) -> str:
     if node_id not in NODE_COLORS:
-        NODE_COLORS[node_id] = next(COLORS)
+        NODE_COLORS[node_id] = _generate_random_color()
     return NODE_COLORS[node_id]
 
 
@@ -103,7 +106,13 @@ def add_ip_addresses(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     ip_address_query = sql.select(IpAddress)
     for ip_address in manager.session.scalars(ip_address_query):
         color = _get_node_color(ip_address.address)
-        dot.node(ip_address.address, label=ip_address.address, shape="ellipse", color=color, fontcolor=color)
+        dot.node(
+            ip_address.address,
+            label=ip_address.address,
+            shape="ellipse",
+            color=color,
+            fontcolor=color,
+        )
 
 
 def add_ip_domain_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -111,8 +120,10 @@ def add_ip_domain_relationships(dot: graphviz.Digraph, manager: LangdonManager) 
         sql.select(IpDomainRel).join(IpDomainRel.domain).join(IpDomainRel.ip_address)
     )
     for ip_domain_rel in manager.session.scalars(ip_address_domain_rel_query):
-        color = _get_node_color(ip_domain_rel.ip_address.address)
-        dot.edge(ip_domain_rel.ip_address.address, ip_domain_rel.domain.name, color=color)
+        color = _get_node_color(ip_domain_rel.domain.name)
+        dot.edge(
+            ip_domain_rel.domain.name, ip_domain_rel.ip_address.address, color=color
+        )
 
 
 def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
@@ -124,12 +135,13 @@ def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 
     for web_directory in manager.session.scalars(web_directories_query):
         node_name = _make_web_directory_node_name(web_directory)
-        color = _get_node_color(node_name)
         dot.node(node_name, shape="note", color=color, fontcolor=color)
 
         if web_directory.domain:
+            color = _get_node_color(web_directory.domain.name)
             dot.edge(web_directory.domain.name, node_name, color=color)
         else:
+            color = _get_node_color(web_directory.ip_address.address)
             dot.edge(web_directory.ip_address.address, node_name, color=color)
 
 
@@ -191,7 +203,8 @@ def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     )
     for used_port in manager.session.scalars(used_ports_query):
         dot.node(str(used_port.port), shape="diamond")
-        dot.edge(str(used_port.port), used_port.ip_address.address)
+        color = _get_node_color(used_port.ip_address.address)
+        dot.edge(used_port.ip_address.address, str(used_port.port), color=color)
 
 
 def add_technologies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
