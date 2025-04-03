@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import urllib.parse
 from typing import TYPE_CHECKING
 
@@ -39,7 +40,7 @@ def generate_graph(
     """
     Generate a graph of the known assets using the Graphviz library.
     """
-    dot = graphviz.Digraph(name="langdon_graph", strict=True)
+    dot = graphviz.Digraph(name="langdon_graph", engine="fdp", strict=True)
 
     add_domains(dot, manager)
     add_ip_addresses(dot, manager)
@@ -68,9 +69,11 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
         directory.domain.name if directory.domain else directory.ip_address.address
     )
     cleaned_directory_path = directory.path.lstrip("/")
-    return urllib.parse.urlunparse(
+    parsed_url = urllib.parse.urlunparse(
         (schema, cleaned_hostname, cleaned_directory_path, "", "", "")
     )
+
+    return re.sub(r"[^a-zA-Z0-9]", "_", parsed_url)
 
 
 def add_domains(dot: graphviz.Digraph, manager: LangdonManager) -> None:
