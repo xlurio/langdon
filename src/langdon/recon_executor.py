@@ -43,6 +43,31 @@ def _download_android_binaries(*, manager: LangdonManager) -> None:
             ...
 
 
+def _get_ip_from_known_domains(*, manager: LangdonManager) -> None:
+    known_domains_query = sql.select(Domain).where(Domain.was_known == True)
+    known_domains = set(manager.session.scalars(known_domains_query))
+
+    for domain in known_domains:
+        with (
+            suppress_timeout_expired_error(),
+            suppress_duplicated_recon_process(),
+            shell_command_execution_context(
+                CommandData(command="host", args=domain.name),
+                manager=manager,
+                timeout=3600,
+            ) as result,
+        ):
+            for line in result.splitlines():
+                if "has address" in line:
+                    ip_address = line.split()[-1]
+                    message_broker.dispatch_event(
+                        manager.get_event_by_name("IpAddressDiscovered")(
+                            address=ip_address, domain=domain
+                        ),
+                        manager=manager,
+                    )
+
+
 def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> None:
     known_domains_query = sql.select(Domain.name).where(Domain.was_known == True)
     known_domains_names = set(manager.session.scalars(known_domains_query))
@@ -374,6 +399,7 @@ def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
     subprocess.run([webanalyze_bin_path, "-update"], check=True)
 
     _download_android_binaries(manager=manager)
+    manager.submit_task(_get_ip_from_known_domains, manager=manager)
     _discover_domains_from_known_ones_passively(manager=manager)
     _discover_domains_actively(manager=manager)
     _discover_content_actively(manager=manager)
