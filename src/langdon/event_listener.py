@@ -158,7 +158,7 @@ def wait_for_all_events_to_be_handled(*, manager: LangdonManager) -> None:
     event_queue_manager = EventListenerQueueManager(manager=manager)
     is_event_queue_empty = False
 
-    while is_event_queue_empty:
+    while not is_event_queue_empty:
         queue = list(*event_queue_manager.read_data_file(manager=manager))
         is_event_queue_empty = not queue
 
