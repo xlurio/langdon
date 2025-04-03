@@ -41,19 +41,21 @@ def run():
         LangdonManager() as manager,
     ):
         log_file_handler = logging.FileHandler(manager.config["log_file"])
-        log_file_handler.setLevel(logging.NOTSET)
-        log_file_handler.setFormatter(langdon_logging.log_formatter)
 
-        logger.addHandler(log_file_handler)
-        return {
-            "importcsv": lambda: assetimporter.import_from_csv(
-                parsed_args, manager=manager
-            ),
-            "run": lambda: recon_executor.run_recon(parsed_args, manager=manager),
-            "graph": lambda: graph_generator.generate_graph(
-                parsed_args, manager=manager
-            ),
-        }[parsed_args.module]()
+        with task_queue.task_queue_context(), event_listener.event_listener_context():
+            log_file_handler.setLevel(logging.NOTSET)
+            log_file_handler.setFormatter(langdon_logging.log_formatter)
+
+            logger.addHandler(log_file_handler)
+            return {
+                "importcsv": lambda: assetimporter.import_from_csv(
+                    parsed_args, manager=manager
+                ),
+                "run": lambda: recon_executor.run_recon(parsed_args, manager=manager),
+                "graph": lambda: graph_generator.generate_graph(
+                    parsed_args, manager=manager
+                ),
+            }[parsed_args.module]()
 
 
 if __name__ == "__main__":
