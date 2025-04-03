@@ -36,7 +36,7 @@ class GraphGeneratorNamespace(argparse.Namespace):
 
 
 def _generate_random_color() -> str:
-    return f"{random.random()} {random.random()} {random.random()}"
+    return f"{random.random():.3f} 1.000 1.000"
 
 
 NODE_COLORS = {}
