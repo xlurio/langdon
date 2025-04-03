@@ -15,7 +15,7 @@ from langdon.command_executor import (
 from langdon.exceptions import AlreadyInChildThread
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
-from langdon.models import Domain, IpAddress, IpDomainRel
+from langdon.models import Domain, IpAddress, IpAddressId, IpDomainRel
 from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
@@ -56,23 +56,26 @@ def _process_nmap_output(
         )
 
 
-def _enumerate_udp_ports(ip_address: IpAddress) -> None:
-    with (
-        LangdonManager() as manager,
-        NamedTemporaryFile("w+b", suffix=".xml") as temp_file,
-        suppress_duplicated_recon_process(),
-        shell_command_execution_context(
-            CommandData(
-                command="nmap",
-                args=f"-Pn -sU -vv -oX '{temp_file.name}' '{ip_address.address}'",
+def _enumerate_udp_ports(ip_address_id: IpAddressId) -> None:
+    with LangdonManager() as manager:
+        ip_address_query = sql.select(IpAddress).where(IpAddress.id == ip_address_id)
+        ip_address = manager.session.execute(ip_address_query).scalar_one()
+
+        with (
+            NamedTemporaryFile("w+b", suffix=".xml") as temp_file,
+            suppress_duplicated_recon_process(),
+            shell_command_execution_context(
+                CommandData(
+                    command="nmap",
+                    args=f"-Pn -sU -vv -oX '{temp_file.name}' '{ip_address.address}'",
+                ),
+                manager=manager,
             ),
-            manager=manager,
-        ),
-    ):
-        temp_file.seek(0)
-        file_content = temp_file.read()
-        logger.debug("Nmap XML:\n%s", file_content)
-        _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
+        ):
+            temp_file.seek(0)
+            file_content = temp_file.read()
+            logger.debug("Nmap XML:\n%s", file_content)
+            _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
 
 
 def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
@@ -95,7 +98,7 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
     try:
         task_queue.submit_task(
             _enumerate_udp_ports,
-            ip_address,
+            ip_address.id,
             manager=manager,
         )
     except AlreadyInChildThread:
@@ -127,9 +130,7 @@ def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None
             domain_id=event.domain_id,
             manager=manager,
         )
-        domain_query = sql.select(Domain).where(
-            Domain.id == event.domain_id
-        )
+        domain_query = sql.select(Domain).where(Domain.id == event.domain_id)
         domain = manager.session.execute(domain_query).scalar_one()
 
         logger.info(
