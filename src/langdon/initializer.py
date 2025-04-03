@@ -20,7 +20,9 @@ class InitNamespace(Namespace):
 
 
 def initialize(args: InitNamespace) -> None:
-    cleaned_directory = args.directory.absolute() or pathlib.Path(".").absolute()
+    cleaned_directory = (
+        args.directory.absolute() if args.directory else pathlib.Path(".").absolute()
+    )
     toml_path = cleaned_directory / "pyproject.toml"
 
     if toml_path.exists():

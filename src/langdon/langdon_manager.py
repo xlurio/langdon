@@ -53,7 +53,8 @@ class LangdonManager(contextlib.AbstractContextManager):
         self.__session = orm.Session(self.__engine)
 
         if threading.current_thread() == threading.main_thread():
-            self.__thread_executor = CF.ThreadPoolExecutor(os.cpu_count() or 1)
+            max_workers = (os.cpu_count() or 1) * 2
+            self.__thread_executor = CF.ThreadPoolExecutor(max_workers)
 
         return self
 
