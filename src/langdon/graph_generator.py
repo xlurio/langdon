@@ -68,12 +68,6 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
         directory.domain.name if directory.domain else directory.ip_address.address
     )
     cleaned_directory_path = directory.path.lstrip("/")
-    print((schema, cleaned_hostname, cleaned_directory_path, "", "", ""))
-    print(
-        urllib.parse.urlunparse(
-            (schema, cleaned_hostname, cleaned_directory_path, "", "", "")
-        )
-    )
     return urllib.parse.urlunparse(
         (schema, cleaned_hostname, cleaned_directory_path, "", "", "")
     )
@@ -101,7 +95,9 @@ def add_ip_domain_relationships(dot: graphviz.Digraph, manager: LangdonManager) 
 
 def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     web_directories_query = (
-        sql.select(WebDirectory).join(WebDirectory.domain).join(WebDirectory.ip_address)
+        sql.select(WebDirectory)
+        .join(WebDirectory.domain, isouter=True)
+        .join(WebDirectory.ip_address, isouter=True)
     )
 
     for web_directory in manager.session.scalars(web_directories_query):
@@ -130,8 +126,8 @@ def add_dir_header_relationships(
     dir_header_rel_query = (
         sql.select(DirHeaderRel)
         .join(DirHeaderRel.directory)
-        .join(WebDirectory.domain)
-        .join(WebDirectory.ip_address)
+        .join(WebDirectory.domain, isouter=True)
+        .join(WebDirectory.ip_address, isouter=True)
         .join(DirHeaderRel.header)
     )
     for dir_header_rel in manager.session.scalars(dir_header_rel_query):
@@ -153,8 +149,8 @@ def add_dir_cookie_relationships(
     dir_cookie_rel_query = (
         sql.select(DirCookieRel)
         .join(DirCookieRel.directory)
-        .join(WebDirectory.domain)
-        .join(WebDirectory.ip_address)
+        .join(WebDirectory.domain, isouter=True)
+        .join(WebDirectory.ip_address, isouter=True)
         .join(DirCookieRel.cookie)
     )
     for dir_cookie_rel in manager.session.scalars(dir_cookie_rel_query):
@@ -166,7 +162,7 @@ def add_dir_cookie_relationships(
 
 def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     used_ports_query = (
-        sql.select(UsedPort).join(WebDirectory.domain).join(UsedPort.ip_address)
+        sql.select(UsedPort).join(WebDirectory.domain, isouter=True).join(UsedPort.ip_address)
     )
     for used_port in manager.session.scalars(used_ports_query):
         dot.node(str(used_port.port), shape="diamond")
@@ -195,8 +191,8 @@ def add_web_dir_tech_relationships(
     web_dir_tech_rel_query = (
         sql.select(WebDirTechRel)
         .join(WebDirTechRel.directory)
-        .join(WebDirectory.domain)
-        .join(WebDirectory.ip_address)
+        .join(WebDirectory.domain, isouter=True)
+        .join(WebDirectory.ip_address, isouter=True)
         .join(WebDirTechRel.technology)
     )
     for web_dir_tech_rel in manager.session.scalars(web_dir_tech_rel_query):
