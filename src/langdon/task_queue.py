@@ -40,12 +40,14 @@ def submit_task(
     """
 
     file_manager = TaskQueueFileManager(manager)
-    new_task = json.dumps({
-        "func": f"{func.__module__}.{func.__name__}",
-        "args": args,
-        "kwargs": kwargs,
-    })
-    current_tasks = list(*file_manager.read_data_file()).append(new_task)
+    new_task = json.dumps(
+        {
+            "func": f"{func.__module__}.{func.__name__}",
+            "args": args,
+            "kwargs": kwargs,
+        }
+    )
+    current_tasks = list(file_manager.read_data_file()).append(new_task)
     file_manager.write_data_file(current_tasks)
 
 
@@ -62,7 +64,7 @@ def start_task_executor() -> None:
                 process_tasks(file_manager, executor)
             except KeyboardInterrupt:
                 break
-            
+
             time.sleep(1)
 
 
@@ -91,25 +93,6 @@ def process_tasks(
             executor.submit(func, *args, **kwargs)
 
         file_manager.write_data_file([])
-
-
-def wait_for_all_tasks_to_finish(*, manager: LangdonManager) -> None:
-    """
-    Wait for all tasks in the queue to finish.
-
-    Args:
-        manager (LangdonManager): The LangdonManager instance.
-        timeout (int): The maximum time to wait for tasks to finish.
-    """
-    file_manager = TaskQueueFileManager(manager)
-    is_task_queue_empty = False
-
-    while not is_task_queue_empty:
-        tasks = file_manager.read_data_file()
-        is_task_queue_empty = not tasks
-
-        if not is_task_queue_empty:
-            time.sleep(1)
 
 
 @contextlib.contextmanager

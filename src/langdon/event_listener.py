@@ -105,7 +105,7 @@ class EventListenerQueueManager(DataFileManagerABC[Sequence[Mapping[str, Any]]])
 def _process_event_queue(
     *, manager: EventListenerQueueManager, executor: CF.Executor
 ) -> bool:
-    queue = list(*manager.read_data_file())
+    queue = manager.read_data_file()
 
     if not queue:
         return
@@ -134,19 +134,6 @@ def start_event_listener() -> None:
             time.sleep(1)
 
 
-def wait_for_all_events_to_be_handled(*, manager: LangdonManager) -> None:
-    """Wait for all events to be handled."""
-    event_queue_manager = EventListenerQueueManager(manager=manager)
-    is_event_queue_empty = False
-
-    while is_event_queue_empty:
-        queue = list(*event_queue_manager.read_data_file())
-        is_event_queue_empty = not queue
-
-        if not is_event_queue_empty:
-            time.sleep(1)
-
-
 @contextlib.contextmanager
 def event_listener_context() -> Iterator[None]:
     process = multiprocessing.Process(target=start_event_listener)
@@ -172,6 +159,6 @@ def send_event_message(event: T, *, manager: LangdonManager) -> None:
     event_data = event.model_dump(mode="json")
     event_data["type"] = type(event).__name__
 
-    queue_data = list(*event_manager.read_data_file())
+    queue_data = list(event_manager.read_data_file())
     queue_data.append(event_data)
     event_manager.write_data_file(queue_data)
