@@ -1,6 +1,11 @@
 # /bin/bash
 set -ex
 
+if [[ $# -ne 0 ]]; then
+    echo "Usage: $0 <recon_project_directory>"
+    exit 1
+fi
+
 cd "$HOME"
 
 # APT Repositories (Firefox)
@@ -129,12 +134,12 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
 exec $SHELL
 
 # Create recoinassaince directory
-mkdir -p "$HOME/recon"
+mkdir -p "$1"
 poetry run -P "$HOME/langdon" \
     langdon -- init --resolvers_file "$HOME/massdns/lists/resolvers.txt" \
     --dns_wordlist "$HOME/jhaddix/all.txt" \
     --content_wordlist "$HOME/SecLists/Discovery/Web-Content/raft-large-directories-lowercase.txt" \
-    --directory "$HOME/recon"
+    --directory "$1"
 echo '#!/bin/bash
 
 set -xe
@@ -147,8 +152,8 @@ fi
 poetry run -P "$HOME/langdon" langdon -- importcsv "$1"
 
 supervisord -c /etc/supervisord.conf
-' > "$HOME/recon/start.sh"
-chmod 754 "$HOME/recon/start.sh"
+' > "$1/start.sh"
+chmod 754 "$1/start.sh"
 
 # Supervisor
 pip install --user supervisor
