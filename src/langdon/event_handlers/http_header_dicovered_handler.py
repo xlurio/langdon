@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import sql
 
 from langdon.langdon_logging import logger
-from langdon.models import DirHeaderRel, HttpHeader
+from langdon.models import DirHeaderRel, HttpHeader, WebDirectory
 from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
@@ -33,9 +33,14 @@ def handle_event(event: HttpHeaderDiscovered, *, manager: LangdonManager) -> Non
         manager=manager,
     )
 
+    web_directory_query = sql.select(WebDirectory).where(
+        WebDirectory.id == event.web_directory_id
+    )
+    web_directory = manager.session.execute(web_directory_query).scalar_one()
+
     if not was_already_related:
         logger.info(
             "Discovered relation between web directory %s and HTTP header %s",
-            event.web_directory.path,
+            web_directory.path,
             event.name,
         )

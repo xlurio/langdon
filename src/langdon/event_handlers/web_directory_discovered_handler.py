@@ -231,10 +231,10 @@ def handle_event(event: WebDirectoryDiscovered, *, manager: LangdonManager) -> N
         )
     )
 
-    if event.ip_address is not None:
-        query = query.where(WebDirectory.ip_id == event.ip_address.id)
-    elif event.domain is not None:
-        query = query.where(WebDirectory.domain_id == event.domain.id)
+    if event.ip_address_id is not None:
+        query = query.where(WebDirectory.ip_id == event.ip_address_id)
+    elif event.domain_id is not None:
+        query = query.where(WebDirectory.domain_id == event.domain_id)
 
     web_directory = session.execute(query).scalar_one()
 

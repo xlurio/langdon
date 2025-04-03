@@ -15,7 +15,7 @@ from langdon.command_executor import (
 from langdon.exceptions import AlreadyInChildThread
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
-from langdon.models import IpAddress, IpDomainRel
+from langdon.models import Domain, IpAddress, IpDomainRel
 from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
@@ -120,17 +120,22 @@ def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None
     query = sql.select(IpAddress).where(IpAddress.address == event.address)
     ip_address = manager.session.execute(query).scalar_one()
 
-    if event.domain is not None:
+    if event.domain_id is not None:
         was_relation_already_known = create_if_not_exist(
             IpDomainRel,
             ip_id=ip_address.id,
             domain_id=event.domain_id,
             manager=manager,
         )
+        domain_query = sql.select(Domain).where(
+            Domain.id == event.domain_id
+        )
+        domain = manager.session.execute(domain_query).scalar_one()
+
         logger.info(
             "Discovered relation between IP address %s and domain %s",
             ip_address.address,
-            event.domain.name,
+            domain.name,
         ) if not was_relation_already_known else None
 
     _process_ip_address(ip_address, manager=manager)

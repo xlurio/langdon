@@ -50,8 +50,6 @@ class DataFileManagerABC(abc.ABC, Generic[T]):
         with self.__process_queue_lock, self.__thread_queue_lock:
             self.__data_file_path.write_text(json.dumps(data))
 
-        logger.debug("Data written to %s", self.__data_file_path)
-
     @property
     def langdon_manager(self) -> LangdonManager:
         return self.__manager

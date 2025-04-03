@@ -15,6 +15,8 @@ from langdon.langdon_logging import logger
 from langdon.models import (
     PortTechRel,
     Technology,
+    UsedPort,
+    WebDirectory,
     WebDirTechRel,
 )
 from langdon.utils import create_if_not_exist
@@ -55,10 +57,10 @@ def handle_event(event: TechnologyDiscovered, *, manager: LangdonManager) -> Non
     _handle_technology_creation(event, manager)
     technology = _fetch_technology(event, manager)
 
-    if event.directory is not None:
+    if event.directory_id is not None:
         _handle_directory_relation(event, technology, manager)
 
-    if event.port is not None:
+    if event.port_id is not None:
         _handle_port_relation(event, technology, manager)
 
     _enumerate_vulnerabilities(technology, manager=manager)
@@ -103,10 +105,15 @@ def _handle_directory_relation(
         manager=manager,
     )
 
+    directory_query = sql.select(WebDirectory).where(
+        WebDirectory.id == event.directory_id
+    )
+    directory = manager.session.execute(directory_query).scalar_one()
+
     if not was_dir_rel_already_known:
         logger.info(
             "Discovered relation between directory %s and technology %s",
-            event.directory.path,
+            directory.path,
             technology.name,
         )
 
@@ -121,9 +128,12 @@ def _handle_port_relation(
         manager=manager,
     )
 
+    port_query = sql.select(UsedPort).where(UsedPort.id == event.port_id)
+    port_obj = manager.session.execute(port_query).scalar_one()
+
     if not was_port_rel_already_known:
         logger.info(
             "Discovered relation between port %s and technology %s",
-            event.port.port,
+            port_obj.port,
             technology.name,
         )

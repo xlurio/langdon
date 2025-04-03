@@ -139,7 +139,7 @@ def _enumerate_web_directories(
             )
 
 
-def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> None:
+def _process_http_port(event: PortDiscovered, ip_address_obj: IpAddress, *, manager: LangdonManager) -> None:
     def process_domains(domains: Sequence[Domain]):
         for domain in domains:
             event_listener.send_event_message(
@@ -163,10 +163,10 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
             ),
             manager=manager,
         )
-        _enumerate_web_directories(event, ip_address=event.ip_address, manager=manager)
+        _enumerate_web_directories(event, ip_address=ip_address_obj, manager=manager)
 
     domain_ids_subquery = sql.select(IpDomainRel.domain_id).where(
-        IpDomainRel.ip_id == event.ip_address.id
+        IpDomainRel.ip_id == event.ip_address_id
     )
     query = sql.select(Domain).where(Domain.id.in_(domain_ids_subquery))
     domains = manager.session.scalars(query).all()
@@ -177,13 +177,13 @@ def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> Non
         process_ip_address()
     else:
         logger.error(
-            f"No domain found for IP address {event.ip_address}. Unable to enumerate "
+            f"No domain found for IP address {ip_address_obj.address}. Unable to enumerate "
             "web content in port 443."
         )
 
 
 def _process_other_ports(
-    port_obj: UsedPort, event: PortDiscovered, *, manager: LangdonManager
+    port_obj: UsedPort, ip_address_obj: IpAddress, *, manager: LangdonManager
 ) -> None:
     with (
         tempfile.NamedTemporaryFile() as temp_file,
@@ -192,7 +192,7 @@ def _process_other_ports(
             CommandData(
                 command="nmap",
                 args=f"--host-timeout 1h -oX {temp_file.name} -sC -sU -sV -p "
-                f"{port_obj.port} {event.ip_address}",
+                f"{port_obj.port} {ip_address_obj.address}",
             ),
             manager=manager,
         ),
@@ -222,14 +222,14 @@ def _process_other_ports(
 
 
 def _process_found_port(
-    port_obj: UsedPort, event: PortDiscovered, *, manager: LangdonManager
+    port_obj: UsedPort, ip_address_obj: IpAddress, event: PortDiscovered, *, manager: LangdonManager
 ) -> None:
     is_http = (event.port in HTTP_PORTS) and (event.transport_layer_protocol == "tcp")
 
     if is_http:
-        return _process_http_port(event, manager=manager)
+        return _process_http_port(event, ip_address_obj, manager=manager)
 
-    return _process_other_ports(port_obj, event, manager=manager)
+    return _process_other_ports(port_obj, ip_address_obj, manager=manager)
 
 
 def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
@@ -241,24 +241,28 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
         defaults={"is_filtered": event.is_filtered},
         manager=manager,
     )
+    ip_address_query = sql.select(IpAddress).where(
+        IpAddress.id == event.ip_address_id
+    )
+    ip_address_obj = manager.session.execute(ip_address_query).scalar_one_or_none()
 
     logger.info(
-        "Port discovered at IP %s: %s", event.ip_address.address, event.port
+        "Port discovered at IP %s: %s", ip_address_obj.address, event.port
     ) if not was_already_known else None
 
     query = (
         sql.select(UsedPort)
-        .where(UsedPort.ip_address_id == event.ip_address.id)
+        .where(UsedPort.ip_address_id == event.ip_address_id)
         .where(UsedPort.port == event.port)
         .where(UsedPort.transport_layer_protocol == event.transport_layer_protocol)
     )
     port_obj = manager.session.execute(query).scalar_one()
 
     if not port_obj.is_filtered:
-        _process_found_port(port_obj, event, manager=manager)
+        _process_found_port(port_obj, ip_address_obj, event, manager=manager)
     else:
         logger.debug(
             "Port %s on IP %s is filtered. Skipping further processing.",
             event.port,
-            event.ip_address.address,
+            ip_address_obj.address,
         )
