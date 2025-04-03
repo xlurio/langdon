@@ -79,7 +79,7 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
 
         _process_amass_for_domains(known_domains_names, manager)
         task_queue.submit_task(_process_subfinder, temp_file.name, manager=manager)
-        _process_assetfinder(known_domains_names, manager)
+        _process_assetfinder_for_domains(known_domains_names, manager)
 
 
 def _process_amass_for_domain(domain: str) -> None:
@@ -152,24 +152,29 @@ def _process_subfinder(temp_file_name: str) -> None:
                 )
 
 
-def _process_assetfinder(
+def _process_assetfinder_for_domain(domain_name: str) -> None:
+    with (
+        LangdonManager() as manager,
+        suppress_duplicated_recon_process(),
+        shell_command_execution_context(
+            CommandData(command="assetfinder", args=f"-subs-only {domain_name}"),
+            manager=manager,
+        ) as output,
+    ):
+        for domain_name in output.splitlines():
+            if domain_name:
+                event_listener.send_event_message(
+                    DomainDiscovered(name=domain_name), manager=manager
+                )
+
+
+def _process_assetfinder_for_domains(
     known_domains_names: list[str], manager: LangdonManager
 ) -> None:
     for known_domain_name in known_domains_names:
-        with (
-            suppress_duplicated_recon_process(),
-            shell_command_execution_context(
-                CommandData(
-                    command="assetfinder", args=f"-subs-only {known_domain_name}"
-                ),
-                manager=manager,
-            ) as output,
-        ):
-            for domain_name in output.splitlines():
-                if domain_name:
-                    event_listener.send_event_message(
-                        DomainDiscovered(name=domain_name), manager=manager
-                    )
+        task_queue.submit_task(
+            _process_assetfinder_for_domain, known_domain_name, manager=manager
+        )
 
 
 def _discover_domains_actively(*, manager: LangdonManager) -> None:
