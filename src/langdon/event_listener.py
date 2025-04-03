@@ -113,7 +113,7 @@ def _process_event_queue(
     for event_data in queue:
         executor.submit(_handle_event_message, event_data)
 
-    manager.write_data_file([], manager=manager)
+    manager.write_data_file([])
 
 
 def start_event_listener() -> None:
@@ -174,4 +174,4 @@ def send_event_message(event: T, *, manager: LangdonManager) -> None:
 
     queue_data = list(*event_manager.read_data_file())
     queue_data.append(event_data)
-    event_manager.write_data_file(queue_data, manager=manager)
+    event_manager.write_data_file(queue_data)
