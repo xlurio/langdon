@@ -45,7 +45,7 @@ def _download_android_binaries(*, manager: LangdonManager) -> None:
 
 def _get_ip_from_known_domains() -> None:
     with LangdonManager() as manager:
-        known_domains_query = sql.select(Domain).where(Domain.was_known is True)
+        known_domains_query = sql.select(Domain).where(Domain.was_known == True)
         known_domains = set(manager.session.scalars(known_domains_query))
 
         for domain in known_domains:
@@ -70,7 +70,7 @@ def _get_ip_from_known_domains() -> None:
 
 
 def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> None:
-    known_domains_query = sql.select(Domain.name).where(Domain.was_known is True)
+    known_domains_query = sql.select(Domain.name).where(Domain.was_known == True)
     known_domains_names = set(manager.session.scalars(known_domains_query))
 
     with tempfile.NamedTemporaryFile("w+") as temp_file:
