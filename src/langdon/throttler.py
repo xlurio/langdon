@@ -19,7 +19,11 @@ def _read_cache_data(*, manager: LangdonManager) -> dict[str, float]:
     try:
         cache_file = manager.config["cache_file"]
         return json.loads(pathlib.Path(cache_file).read_text())
-    
+
+    except json.JSONDecodeError:
+        logger.debug("The cache file is empty or corrupted")
+        return {}
+
     except FileNotFoundError:
         logger.debug("No cache file found")
         return {}
@@ -48,7 +52,10 @@ def wait_for_slot(queue: str, *, manager: LangdonManager) -> None:
         MIN_TIME_BETWEEN_REQUESTS, MAX_TIME_BETWEEN_REQUESTS
     )
 
-    while time.time() - _get_cache(queue, manager=manager) < expected_time_between_requests:
+    while (
+        time.time() - _get_cache(queue, manager=manager)
+        < expected_time_between_requests
+    ):
         time.sleep(0.1)
 
     _set_cache(queue, time.time(), manager=manager)

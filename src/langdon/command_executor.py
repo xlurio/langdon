@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import Any, Generic, TypeVar
 
 import pydantic
+from sqlalchemy import exc as sa_exc
 from sqlalchemy import sql
 
 from langdon.exceptions import DuplicatedReconProcessException, LangdonException
@@ -87,8 +88,16 @@ def _execute_command_with_context(
 
     yield execute_command(command, ignore_exit_code=ignore_exit_code, timeout=timeout)
 
-    session.add(ReconProcess(name=command.command, args=command.args))
-    session.commit()
+    try:
+        session.add(ReconProcess(name=command.command, args=command.args))
+    except sa_exc.IntegrityError:
+        logger.warning(
+            "A race condition occurred while running the command %s with args %s",
+            command.command,
+            command.args,
+        )
+    else:
+        session.commit()
 
 
 @contextlib.contextmanager
@@ -178,13 +187,22 @@ def function_execution_context(
 
     yield func_data.function(*func_data.cleaned_args, **func_data.cleaned_kwargs)
 
-    session.add(
-        ReconProcess(
-            name=func_data.function.__name__,
-            args=func_data.args_kwargs_str,
+    try:
+        session.add(
+            ReconProcess(
+                name=func_data.function.__name__,
+                args=func_data.args_kwargs_str,
+            )
         )
-    )
-    session.commit()
+    except sa_exc.IntegrityError:
+        logger.warning(
+            "A race condition occurred while running the function '%s' with args '%s'",
+            func_data.function.__name__,
+            func_data.args_kwargs_str,
+        )
+        session.rollback()
+    else:
+        session.commit()
 
 
 @contextlib.contextmanager
