@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import sql
 
-from langdon import message_broker, throttler
+from langdon import event_listener, throttler
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -47,7 +47,7 @@ def _dispatch_event(
     event_name: str, data: dict[str, Any], *, manager: LangdonManager
 ) -> None:
     event = manager.get_event_by_name(event_name)(**data)
-    message_broker.dispatch_event(event, manager=manager)
+    event_listener.send_event_message(event, manager=manager)
 
 
 def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) -> None:
@@ -176,10 +176,10 @@ def _process_uncommon_headers(
         if isinstance(uncommon_headers, str):
             for header in uncommon_headers.split(","):
                 header = header.strip()
-                message_broker.dispatch_event(
+                event_listener.send_event_message(
                     manager.get_event_by_name("HttpHeaderDiscovered")(
                         name=header,
-                        web_directory=web_directory,
+                        web_directory_id=web_directory.id,
                     ),
                     manager=manager,
                 )
@@ -192,10 +192,10 @@ def _process_cookies(
     if cookies := item.get("plugins", {}).get("Cookies", {}).get("string", []):
         for cookie in cookies:
             cookie = cookie.strip()
-            message_broker.dispatch_event(
+            event_listener.send_event_message(
                 manager.get_event_by_name("HttpCookieDiscovered")(
                     name=cookie,
-                    web_directory=web_directory,
+                    web_directory_id=web_directory.id,
                 ),
                 manager=manager,
             )
@@ -205,8 +205,8 @@ def handle_event(event: WebDirectoryDiscovered, *, manager: LangdonManager) -> N
     was_already_known = create_if_not_exist(
         WebDirectory,
         path=event.path,
-        domain_id=event.domain.id if event.domain else None,
-        ip_id=event.ip_address.id if event.ip_address else None,
+        domain_id=event.domain_id if event.domain_id else None,
+        ip_id=event.ip_address_id if event.ip_address_id else None,
         uses_ssl=event.uses_ssl,
         manager=manager,
     )

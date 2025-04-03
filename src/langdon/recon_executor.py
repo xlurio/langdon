@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import message_broker
+from langdon import event_listener, task_queue
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -43,33 +43,34 @@ def _download_android_binaries(*, manager: LangdonManager) -> None:
             ...
 
 
-def _get_ip_from_known_domains(*, manager: LangdonManager) -> None:
-    known_domains_query = sql.select(Domain).where(Domain.was_known == True)
-    known_domains = set(manager.session.scalars(known_domains_query))
+def _get_ip_from_known_domains() -> None:
+    with LangdonManager() as manager:
+        known_domains_query = sql.select(Domain).where(Domain.was_known is True)
+        known_domains = set(manager.session.scalars(known_domains_query))
 
-    for domain in known_domains:
-        with (
-            suppress_timeout_expired_error(),
-            suppress_duplicated_recon_process(),
-            shell_command_execution_context(
-                CommandData(command="host", args=domain.name),
-                manager=manager,
-                timeout=3600,
-            ) as result,
-        ):
-            for line in result.splitlines():
-                if "has address" in line:
-                    ip_address = line.split()[-1]
-                    message_broker.dispatch_event(
-                        manager.get_event_by_name("IpAddressDiscovered")(
-                            address=ip_address, domain=domain
-                        ),
-                        manager=manager,
-                    )
+        for domain in known_domains:
+            with (
+                suppress_timeout_expired_error(),
+                suppress_duplicated_recon_process(),
+                shell_command_execution_context(
+                    CommandData(command="host", args=domain.name),
+                    manager=manager,
+                    timeout=3600,
+                ) as result,
+            ):
+                for line in result.splitlines():
+                    if "has address" in line:
+                        ip_address = line.split()[-1]
+                        event_listener.send_event_message(
+                            manager.get_event_by_name("IpAddressDiscovered")(
+                                address=ip_address, domain_id=domain.id
+                            ),
+                            manager=manager,
+                        )
 
 
 def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> None:
-    known_domains_query = sql.select(Domain.name).where(Domain.was_known == True)
+    known_domains_query = sql.select(Domain.name).where(Domain.was_known is True)
     known_domains_names = set(manager.session.scalars(known_domains_query))
 
     with tempfile.NamedTemporaryFile("w+") as temp_file:
@@ -77,10 +78,11 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
         temp_file.seek(0)
 
         _process_amass_for_domains(known_domains_names, manager)
-        manager.submit_task(_process_subfinder, temp_file.name, manager)
+        task_queue.submit_task(_process_subfinder, temp_file.name, manager=manager)
         _process_assetfinder(known_domains_names, manager)
 
-        manager.wait_for_pending_tasks()
+        task_queue.wait_for_all_tasks_to_finish(manager=manager)
+        event_listener.wait_for_all_events_to_be_handled(manager=manager)
 
 
 def _process_amass_for_domain(domain: str) -> None:
@@ -112,7 +114,7 @@ def _process_amass_line_for_domains(
             f"A new domain was found but was not retrieved from output:\n{line}"
         )
     for domain_name in domains:
-        message_broker.dispatch_event(
+        event_listener.send_event_message(
             DomainDiscovered(name=domain_name), manager=manager
         )
 
@@ -126,19 +128,20 @@ def _process_amass_line_for_ips(
             f"A new IP address was found but was not retrieved from output:\n{line}"
         )
     for ip_address in ip_addresses:
-        message_broker.dispatch_event(
+        event_listener.send_event_message(
             IpAddressDiscovered(address=ip_address),
             manager=manager,
         )
 
 
-def _process_amass_for_domains(domains: set[str], manager: LangdonManager) -> None:
-    for domain in domains:
-        manager.submit_task(_process_amass_for_domain, domain)
+def _process_amass_for_domains(domain_names: set[str], manager: LangdonManager) -> None:
+    for domain_name in domain_names:
+        task_queue.submit_task(_process_amass_for_domain, domain_name, manager=manager)
 
 
-def _process_subfinder(temp_file_name: str, manager: LangdonManager) -> None:
+def _process_subfinder(temp_file_name: str) -> None:
     with (
+        LangdonManager() as manager,
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
             CommandData(command="subfinder", args=f"-silent -dL {temp_file_name}"),
@@ -147,7 +150,7 @@ def _process_subfinder(temp_file_name: str, manager: LangdonManager) -> None:
     ):
         for domain_name in output.splitlines():
             if domain_name:
-                message_broker.dispatch_event(
+                event_listener.send_event_message(
                     DomainDiscovered(name=domain_name), manager=manager
                 )
 
@@ -167,7 +170,7 @@ def _process_assetfinder(
         ):
             for domain_name in output.splitlines():
                 if domain_name:
-                    message_broker.dispatch_event(
+                    event_listener.send_event_message(
                         DomainDiscovered(name=domain_name), manager=manager
                     )
 
@@ -220,7 +223,7 @@ def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> N
         ):
             for domain_name in output.splitlines():
                 if domain_name:
-                    message_broker.dispatch_event(
+                    event_listener.send_event_message(
                         DomainDiscovered(name=domain_name), manager=manager
                     )
 
@@ -246,7 +249,7 @@ def _discover_domains_with_gobuster(
             for domain_name in output.splitlines():
                 if domain_match := domain_regex.match(domain_name):
                     domain_name = domain_match.group("domain")
-                    message_broker.dispatch_event(
+                    event_listener.send_event_message(
                         DomainDiscovered(name=domain_name), manager=manager
                     )
 
@@ -332,7 +335,7 @@ def _crawl_with_katana(
             if line:
                 parsed_urls = urllib.parse.urlparse(line)
                 new_domain_name = parsed_urls.netloc.split(":")[0]
-                message_broker.dispatch_event(
+                event_listener.send_event_message(
                     DomainDiscovered(name=new_domain_name), manager=manager
                 )
 
@@ -342,8 +345,10 @@ def _crawl_with_katana(
                 new_domain = manager.session.execute(new_domain_query).scalar_one()
 
                 path = parsed_urls.path
-                message_broker.dispatch_event(
-                    WebDirectoryDiscovered(path=path, domain=new_domain, uses_ssl=True),
+                event_listener.send_event_message(
+                    WebDirectoryDiscovered(
+                        path=path, domain_id=new_domain.id, uses_ssl=True
+                    ),
                     manager=manager,
                 )
 
@@ -378,9 +383,9 @@ def _discover_content_with_gobuster(
         ):
             for discovered_path in output.splitlines():
                 if cleaned_path := discovered_path.strip():
-                    message_broker.dispatch_event(
+                    event_listener.send_event_message(
                         WebDirectoryDiscovered(
-                            path=cleaned_path, domain=known_domain, uses_ssl=True
+                            path=cleaned_path, domain_id=known_domain.id, uses_ssl=True
                         ),
                         manager=manager,
                     )
@@ -399,7 +404,7 @@ def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
     subprocess.run([webanalyze_bin_path, "-update"], check=True)
 
     _download_android_binaries(manager=manager)
-    manager.submit_task(_get_ip_from_known_domains, manager=manager)
+    task_queue.submit_task(_get_ip_from_known_domains, manager=manager)
     _discover_domains_from_known_ones_passively(manager=manager)
     _discover_domains_actively(manager=manager)
     _discover_content_actively(manager=manager)

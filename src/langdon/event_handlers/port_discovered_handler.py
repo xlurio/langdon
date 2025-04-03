@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import sql
 
-from langdon import message_broker, throttler
+from langdon import event_listener, throttler
 from langdon.command_executor import (
     CommandData,
     FunctionData,
@@ -23,6 +23,8 @@ from langdon.models import Domain, IpAddress, IpDomainRel, UsedPort
 from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from langdon.events import PortDiscovered
     from langdon.langdon_manager import LangdonManager
 
@@ -46,7 +48,7 @@ def _dispatch_web_directory_discovered(
 
         domain_name = url_parsed.netloc.split(":")[0]
 
-        message_broker.dispatch_event(
+        event_listener.send_event_message(
             manager.get_event_by_name("DomainDiscovered")(name=domain_name),
             manager=manager,
         )
@@ -54,11 +56,11 @@ def _dispatch_web_directory_discovered(
         new_domain = manager.session.execute(new_domain_query).scalar_one_or_none()
 
         cleaned_path = url_parsed.path
-        message_broker.dispatch_event(
+        event_listener.send_event_message(
             manager.get_event_by_name("WebDirectoryDiscovered")(
                 path=cleaned_path,
-                domain=new_domain,
-                ip_address=ip_address,
+                domain_id=new_domain.id,
+                ip_address_id=ip_address.id,
                 uses_ssl=event.port == 443,
             ),
             manager=manager,
@@ -126,32 +128,38 @@ def _enumerate_web_directories(
             if row["firewall"] == "None":
                 continue
 
-            message_broker.dispatch_event(
+            event_listener.send_event_message(
                 manager.get_event_by_name("TechnologyDiscovered")(
                     name=row["firewall"],
                     version=None,
-                    domain=domain,
-                    ip_address=ip_address,
+                    domain_id=domain.id,
+                    ip_address_id=ip_address.id,
                 ),
                 manager=manager,
             )
 
 
 def _process_http_port(event: PortDiscovered, *, manager: LangdonManager) -> None:
-    def process_domains(domains):
+    def process_domains(domains: Sequence[Domain]):
         for domain in domains:
-            message_broker.dispatch_event(
+            event_listener.send_event_message(
                 manager.get_event_by_name("WebDirectoryDiscovered")(
-                    path="/", domain=domain, manager=manager, uses_ssl=event.port == 443
+                    path="/",
+                    domain_id=domain.id,
+                    manager=manager,
+                    uses_ssl=event.port == 443,
                 ),
                 manager=manager,
             )
             _enumerate_web_directories(event, domain=domain, manager=manager)
 
     def process_ip_address():
-        message_broker.dispatch_event(
+        event_listener.send_event_message(
             manager.get_event_by_name("WebDirectoryDiscovered")(
-                path="/", ip_address=event.ip_address, manager=manager, uses_ssl=False
+                path="/",
+                ip_address_id=event.ip_address_id,
+                manager=manager,
+                uses_ssl=False,
             ),
             manager=manager,
         )
@@ -205,9 +213,9 @@ def _process_other_ports(
                 name = technology
                 version = None
 
-            message_broker.dispatch_event(
+            event_listener.send_event_message(
                 manager.get_event_by_name("TechnologyDiscovered")(
-                    name=name, version=version, port=port_obj
+                    name=name, version=version, port_id=port_obj.id
                 ),
                 manager=manager,
             )
@@ -229,7 +237,7 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
         UsedPort,
         port=event.port,
         transport_layer_protocol=event.transport_layer_protocol,
-        ip_address_id=event.ip_address.id,
+        ip_address_id=event.ip_address_id,
         defaults={"is_filtered": event.is_filtered},
         manager=manager,
     )

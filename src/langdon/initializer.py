@@ -46,19 +46,23 @@ def initialize(args: InitNamespace) -> None:
     dns_wordlist = args.dns_wordlist.absolute()
     content_wordlist = args.content_wordlist.absolute()
     cache_file = cleaned_directory / ".langdon.cache.json"
+    event_queue_file = cleaned_directory / ".langdon.events.queue.json"
+    task_queue_file = cleaned_directory / ".langdon.tasks.queue.json"
 
     toml_config = {
         "tool": {
             "langdon": {
                 "cache_file": str(cache_file),
-                "database": str(database_path),
-                "web_directory_screenshots": str(web_directory_screenshots),
-                "log_file": str(cleaned_directory / "langdon.log"),
-                "downloaded_apks_dir": str(downloaded_apks_dir),
-                "resolvers_file": str(resolvers_file),
-                "dns_wordlist": str(dns_wordlist),
                 "content_wordlist": str(content_wordlist),
+                "database": str(database_path),
+                "dns_wordlist": str(dns_wordlist),
+                "downloaded_apks_dir": str(downloaded_apks_dir),
+                "log_file": str(cleaned_directory / "langdon.log"),
+                "event_queue_file": str(event_queue_file),
+                "resolvers_file": str(resolvers_file),
+                "task_queue_file": str(task_queue_file),
                 "user_agent": DEFAULT_USER_AGENT,
+                "web_directory_screenshots": str(web_directory_screenshots),
             }
         }
     }

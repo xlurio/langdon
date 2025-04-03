@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import message_broker
+from langdon import event_listener
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -31,9 +31,9 @@ def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
         for line in result.splitlines():
             if "has address" in line:
                 ip_address = line.split()[-1]
-                message_broker.dispatch_event(
+                event_listener.send_event_message(
                     manager.get_event_by_name("IpAddressDiscovered")(
-                        address=ip_address, domain=domain
+                        address=ip_address, domain_id=domain.id
                     ),
                     manager=manager,
                 )

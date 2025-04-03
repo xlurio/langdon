@@ -9,21 +9,27 @@ from sqlalchemy import orm
 class SqlAlchemyModel(orm.DeclarativeBase): ...
 
 
+ReconProcessId = int
+
+
 class ReconProcess(SqlAlchemyModel):
     __tablename__ = "langdon_reconprocesses"
     __table_args__ = (
         sqlalchemy.UniqueConstraint("name", "args", name="_name_args_uc"),
     )
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[ReconProcessId] = orm.mapped_column(primary_key=True)
     name: orm.Mapped[str]
     args: orm.Mapped[str]
+
+
+DomainId = int
 
 
 class Domain(SqlAlchemyModel):
     __tablename__ = "langdon_domains"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[DomainId] = orm.mapped_column(primary_key=True)
     name: orm.Mapped[str] = orm.mapped_column(unique=True)
     was_known: orm.Mapped[bool] = orm.mapped_column(default=False)
     web_directories: orm.Mapped[list[WebDirectory]] = (
@@ -36,20 +42,24 @@ class Domain(SqlAlchemyModel):
     )
 
 
+AndroidAppId = int
+
+
 class AndroidApp(SqlAlchemyModel):
     __tablename__ = "langdon_androidapps"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[AndroidAppId] = orm.mapped_column(primary_key=True)
     android_app_id: orm.Mapped[str] = orm.mapped_column(unique=True)
 
 
 IpAddressVersionT = Literal["ipv4", "ipv6"]
+IpAddressId = int
 
 
 class IpAddress(SqlAlchemyModel):
     __tablename__ = "langdon_ipaddresses"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[IpAddressId] = orm.mapped_column(primary_key=True)
     address: orm.Mapped[str] = orm.mapped_column(unique=True)
     version: orm.Mapped[IpAddressVersionT]
     domain_relationships: orm.Mapped[list[IpDomainRel]] = orm.relationship(
@@ -63,10 +73,13 @@ class IpAddress(SqlAlchemyModel):
     )
 
 
+IpDomainRelId = int
+
+
 class IpDomainRel(SqlAlchemyModel):
     __tablename__ = "langdon_ipdomainrels"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[IpDomainRelId] = orm.mapped_column(primary_key=True)
     ip_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_ipaddresses.id")
     )
@@ -79,6 +92,9 @@ class IpDomainRel(SqlAlchemyModel):
     domain: orm.Mapped[Domain] = orm.relationship(back_populates="ip_relationships")
 
 
+WebDirectoryId = int
+
+
 class WebDirectory(SqlAlchemyModel):
     __tablename__ = "langdon_webdirectories"
     __table_args__ = (
@@ -87,7 +103,7 @@ class WebDirectory(SqlAlchemyModel):
         ),
     )
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[WebDirectoryId] = orm.mapped_column(primary_key=True)
     path: orm.Mapped[str]
     domain_id: orm.Mapped[int | None] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_domains.id"), nullable=True
@@ -116,20 +132,26 @@ class WebDirectory(SqlAlchemyModel):
     )
 
 
+HttpHeaderId = int
+
+
 class HttpHeader(SqlAlchemyModel):
     __tablename__ = "langdon_httpheaders"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[HttpHeaderId] = orm.mapped_column(primary_key=True)
     name: orm.Mapped[str] = orm.mapped_column(unique=True)
     directory_relationships: orm.Mapped[list[DirHeaderRel]] = orm.relationship(
         back_populates="header", cascade="all, delete-orphan"
     )
 
 
+DirHeaderRelId = int
+
+
 class DirHeaderRel(SqlAlchemyModel):
     __tablename__ = "langdon_dirheaderrels"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[DirHeaderRelId] = orm.mapped_column(primary_key=True)
     header_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_httpheaders.id")
     )
@@ -144,20 +166,26 @@ class DirHeaderRel(SqlAlchemyModel):
     )
 
 
+HttpCookieId = int
+
+
 class HttpCookie(SqlAlchemyModel):
     __tablename__ = "langdon_httpcookies"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[HttpCookieId] = orm.mapped_column(primary_key=True)
     name: orm.Mapped[str] = orm.mapped_column(unique=True)
     directory_relationships: orm.Mapped[list[DirCookieRel]] = orm.relationship(
         back_populates="cookie", cascade="all, delete-orphan"
     )
 
 
+DirCookieRelId = int
+
+
 class DirCookieRel(SqlAlchemyModel):
     __tablename__ = "langdon_dircookierels"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[DirCookieRelId] = orm.mapped_column(primary_key=True)
     cookie_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_httpcookies.id")
     )
@@ -172,10 +200,13 @@ class DirCookieRel(SqlAlchemyModel):
     )
 
 
+WebDirectoryScreenshotId = int
+
+
 class WebDirectoryScreenshot(SqlAlchemyModel):
     __tablename__ = "langdon_webdirectoryscreenshots"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[WebDirectoryScreenshotId] = orm.mapped_column(primary_key=True)
     screenshot_path: orm.Mapped[str]
     directory_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_webdirectories.id")
@@ -184,6 +215,7 @@ class WebDirectoryScreenshot(SqlAlchemyModel):
 
 
 TransportLayerProtocolT = Literal["tcp", "udp"]
+UsedPortId = int
 
 
 class UsedPort(SqlAlchemyModel):
@@ -197,7 +229,7 @@ class UsedPort(SqlAlchemyModel):
         ),
     )
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[UsedPortId] = orm.mapped_column(primary_key=True)
     port: orm.Mapped[int] = orm.mapped_column()
     transport_layer_protocol: orm.Mapped[TransportLayerProtocolT]
     is_filtered: orm.Mapped[bool]
@@ -210,13 +242,16 @@ class UsedPort(SqlAlchemyModel):
     )
 
 
+TechnologyId = int
+
+
 class Technology(SqlAlchemyModel):
     __tablename__ = "langdon_technologies"
     __table_args__ = (
         sqlalchemy.UniqueConstraint("name", "version", name="_name_version_uc"),
     )
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[TechnologyId] = orm.mapped_column(primary_key=True)
 
     name: orm.Mapped[str]
     version: orm.Mapped[str | None]
@@ -231,10 +266,13 @@ class Technology(SqlAlchemyModel):
     )
 
 
+WebDirTechRelId = int
+
+
 class WebDirTechRel(SqlAlchemyModel):
     __tablename__ = "langdon_webdirtechrels"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[WebDirTechRelId] = orm.mapped_column(primary_key=True)
     directory_id: orm.Mapped[int] = orm.mapped_column(
         sqlalchemy.ForeignKey("langdon_webdirectories.id")
     )
@@ -247,6 +285,9 @@ class WebDirTechRel(SqlAlchemyModel):
     technology: orm.Mapped[Technology] = orm.relationship(
         back_populates="web_directory_relationships"
     )
+
+
+PortTechRelId = int
 
 
 class PortTechRel(SqlAlchemyModel):
@@ -267,10 +308,13 @@ class PortTechRel(SqlAlchemyModel):
     )
 
 
+VulnerabilityId = int
+
+
 class Vulnerability(SqlAlchemyModel):
     __tablename__ = "langdon_vulnerabilities"
 
-    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    id: orm.Mapped[VulnerabilityId] = orm.mapped_column(primary_key=True)
     name: orm.Mapped[str] = orm.mapped_column(unique=True)
     source: orm.Mapped[str]
     technology_id: orm.Mapped[int] = orm.mapped_column(

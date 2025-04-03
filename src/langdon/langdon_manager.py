@@ -1,23 +1,20 @@
 from __future__ import annotations
 
-import concurrent.futures as CF
 import contextlib
-import os
 import sys
-import threading
-import tomllib
 from typing import TYPE_CHECKING, TypeVar
 
 import sqlalchemy
+import tomllib
 from sqlalchemy import orm
 
-from langdon.exceptions import AlreadyInChildThread, LangdonException
+from langdon.exceptions import LangdonException
 from langdon.langdon_logging import logger
 from langdon.models import SqlAlchemyModel
 from langdon.output import OutputColor
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Mapping
     from types import TracebackType
 
     from langdon.events import Event
@@ -35,8 +32,6 @@ def register_event(event_cls: type[T]) -> type[T]:
 
 
 class LangdonManager(contextlib.AbstractContextManager):
-    __pending_futures: list[CF.Future[None]]
-
     def __init__(self) -> None:
         with open("pyproject.toml", "rb") as pyproject_file:
             self.__config = tomllib.load(pyproject_file)["tool"]["langdon"]
@@ -45,16 +40,10 @@ class LangdonManager(contextlib.AbstractContextManager):
         self.__engine = sqlalchemy.create_engine(
             f"sqlite:///{db_path}",
         )
-        self.__thread_executor = None
-        self.__pending_futures = []
 
     def __enter__(self) -> LangdonManager:
         SqlAlchemyModel.metadata.create_all(self.__engine, checkfirst=True)
         self.__session = orm.Session(self.__engine)
-
-        if threading.current_thread() == threading.main_thread():
-            max_workers = (os.cpu_count() or 1) * 2
-            self.__thread_executor = CF.ThreadPoolExecutor(max_workers)
 
         return self
 
@@ -70,38 +59,6 @@ class LangdonManager(contextlib.AbstractContextManager):
     def config(self) -> dict[ConfigurationKeyT, str]:
         return self.__config
 
-    @property
-    def thread_executor(self) -> CF.ThreadPoolExecutor:
-        if self.__thread_executor is None:
-            raise AlreadyInChildThread(
-                "Creating a thread in a child thread is not allowed."
-            )
-
-        return self.__thread_executor
-
-    def submit_task(
-        self,
-        target: Callable[..., None],
-        *args: object,
-        **kwargs: object,
-    ) -> CF.Future[None] | None:
-        if self.__thread_executor is None:
-            logger.debug("Already in child thread, running task directly")
-            return target(*args, **kwargs)
-
-        self.__pending_futures.append(
-            self.__thread_executor.submit(target, *args, **kwargs)
-        )
-
-    def wait_for_pending_tasks(self) -> None:
-        if self.__thread_executor is None:
-            return
-
-        for future in self.__pending_futures:
-            future.result()
-
-        self.__pending_futures.clear()
-
     def __exit__(
         self,
         exc_type: type[Exception] | None,
@@ -110,9 +67,6 @@ class LangdonManager(contextlib.AbstractContextManager):
     ) -> None:
         self.__session.rollback()
         self.__session.close()
-
-        if self.__thread_executor:
-            self.__thread_executor.shutdown(wait=True)
 
         if exc_type is not None:
             self._handle_exception(exc_type, exc_value, traceback)
@@ -128,11 +82,9 @@ class LangdonManager(contextlib.AbstractContextManager):
             print(f"{OutputColor.RED}Error: {exc_value!s}{OutputColor.RESET}")
             sys.exit(1)
 
-        elif exc_type == KeyboardInterrupt:
-            print(f"Exiting...")
+        elif exc_type is KeyboardInterrupt:
+            print("Exiting...")
             sys.exit(0)
 
-        logger.debug(
-            "Unhandled exception while running Langdon", exc_info=True
-        )
+        logger.debug("Unhandled exception while running Langdon", exc_info=True)
         raise exc_value.with_traceback(traceback)

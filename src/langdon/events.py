@@ -5,32 +5,31 @@ import pydantic
 
 from langdon.langdon_manager import register_event
 from langdon.models import (
-    Domain,
-    IpAddress,
-    Technology,
+    DomainId,
+    IpAddressId,
+    TechnologyId,
     TransportLayerProtocolT,
-    UsedPort,
-    WebDirectory,
+    UsedPortId,
+    WebDirectoryId,
 )
 
 
-class Event(pydantic.BaseModel, abc.ABC):
-    model_config = {"arbitrary_types_allowed": True}
+class Event(pydantic.BaseModel, abc.ABC): ...
 
 
 @register_event
 class VulnerabilityDiscovered(Event):
     name: str = pydantic.Field(min_length=1)
     source: str = pydantic.Field(min_length=1)
-    technology: Technology
+    technology_id: TechnologyId
 
 
 @register_event
 class TechnologyDiscovered(Event):
     name: str = pydantic.Field(min_length=1)
     version: str | None = None
-    directory: WebDirectory | None = None
-    port: UsedPort | None = None
+    directory_id: WebDirectoryId | None = None
+    port_id: UsedPortId | None = None
 
     @pydantic.field_validator("name")
     @classmethod
@@ -57,7 +56,7 @@ class DomainDiscovered(Event):
 @register_event
 class IpAddressDiscovered(Event):
     address: str
-    domain: Domain | None = None
+    domain_id: DomainId | None = None
 
     @pydantic.field_validator("address")
     @classmethod
@@ -76,24 +75,24 @@ class PortDiscovered(Event):
     port: int = pydantic.Field(gt=0)
     transport_layer_protocol: TransportLayerProtocolT
     is_filtered: bool
-    ip_address: IpAddress
+    ip_address_id: IpAddressId
 
 
 @register_event
 class WebDirectoryDiscovered(Event):
     path: str = pydantic.Field(min_length=1)
-    domain: Domain | None = None
-    ip_address: IpAddress | None = None
+    domain_id: DomainId | None = None
+    ip_address_id: IpAddressId | None = None
     uses_ssl: bool
 
 
 @register_event
 class HttpHeaderDiscovered(Event):
     name: str = pydantic.Field(min_length=1)
-    web_directory: WebDirectory
+    web_directory_id: WebDirectoryId
 
 
 @register_event
 class HttpCookieDiscovered(Event):
     name: str = pydantic.Field(min_length=1)
-    web_directory: WebDirectory
+    web_directory_id: WebDirectoryId

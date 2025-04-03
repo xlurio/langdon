@@ -14,7 +14,9 @@ from langdon import (
 from langdon import langdon_argparser as argparser
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
+from langdon import event_listener
 from langdon.output import OutputColor
+from langdon import task_queue
 
 
 def run():
@@ -33,7 +35,11 @@ def run():
     if is_initializing:
         return initializer.initialize(parsed_args)
 
-    with LangdonManager() as manager:
+    with (
+        task_queue.task_queue_context(),
+        event_listener.event_listener_context(),
+        LangdonManager() as manager,
+    ):
         log_file_handler = logging.FileHandler(manager.config["log_file"])
         log_file_handler.setLevel(logging.NOTSET)
         log_file_handler.setFormatter(langdon_logging.log_formatter)

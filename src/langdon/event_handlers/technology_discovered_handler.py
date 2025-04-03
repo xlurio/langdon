@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import message_broker
+from langdon import event_listener
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -43,7 +43,7 @@ def _enumerate_vulnerabilities(
         output_parsed = json.loads(output)
 
         for entry in output_parsed["RESULTS_EXPLOIT"]:
-            message_broker.dispatch_event(
+            event_listener.send_event_message(
                 manager.get_event_by_name("VulnerabilityDiscovered")(
                     name=entry["Title"], source=entry["URL"], technology=technology
                 ),
@@ -98,7 +98,7 @@ def _handle_directory_relation(
 ) -> None:
     was_dir_rel_already_known = create_if_not_exist(
         WebDirTechRel,
-        directory_id=event.directory.id,
+        directory_id=event.directory_id,
         technology_id=technology.id,
         manager=manager,
     )
@@ -116,7 +116,7 @@ def _handle_port_relation(
 ) -> None:
     was_port_rel_already_known = create_if_not_exist(
         PortTechRel,
-        port_id=event.port.id,
+        port_id=event.port_id,
         technology_id=technology.id,
         manager=manager,
     )

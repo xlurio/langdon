@@ -28,7 +28,7 @@ def handle_event(event: HttpHeaderDiscovered, *, manager: LangdonManager) -> Non
 
     was_already_related = create_if_not_exist(
         DirHeaderRel,
-        directory_id=event.web_directory.id,
+        directory_id=event.web_directory_id,
         header_id=header.id,
         manager=manager,
     )

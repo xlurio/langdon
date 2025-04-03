@@ -28,7 +28,7 @@ def handle_event(event: HttpCookieDiscovered, *, manager: LangdonManager) -> Non
 
     was_already_related = create_if_not_exist(
         DirCookieRel,
-        directory_id=event.web_directory.id,
+        directory_id=event.web_directory_id,
         cookie_id=cookie.id,
         manager=manager,
     )

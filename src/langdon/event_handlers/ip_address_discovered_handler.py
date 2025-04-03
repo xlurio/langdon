@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import message_broker
+from langdon import event_listener, task_queue
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -45,19 +45,20 @@ def _process_nmap_output(
         port_number = int(port.attrib["portid"])
         is_filtered = state_data.attrib["state"] == "filtered"
 
-        message_broker.dispatch_event(
+        event_listener.send_event_message(
             manager.get_event_by_name("PortDiscovered")(
                 port=port_number,
                 transport_layer_protocol=transport_layer_protocol,
                 is_filtered=is_filtered,
-                ip_address=ip_address,
+                ip_address_id=ip_address.id,
             ),
             manager=manager,
         )
 
 
-def _enumerate_udp_ports(ip_address: IpAddress, *, manager: LangdonManager) -> None:
+def _enumerate_udp_ports(ip_address: IpAddress) -> None:
     with (
+        LangdonManager() as manager,
         NamedTemporaryFile("w+b", suffix=".xml") as temp_file,
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
@@ -92,7 +93,7 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
         _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
 
     try:
-        manager.submit_task(
+        task_queue.submit_task(
             _enumerate_udp_ports,
             ip_address,
             manager=manager,
@@ -123,7 +124,7 @@ def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None
         was_relation_already_known = create_if_not_exist(
             IpDomainRel,
             ip_id=ip_address.id,
-            domain_id=event.domain.id,
+            domain_id=event.domain_id,
             manager=manager,
         )
         logger.info(
