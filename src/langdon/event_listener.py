@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
 import concurrent.futures as CF
 import contextlib
 import multiprocessing
 import os
 import time
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from langdon.abc import DataFileManagerABC

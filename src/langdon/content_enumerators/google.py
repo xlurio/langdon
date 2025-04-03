@@ -62,12 +62,10 @@ def _solve_captcha(driver: webdriver.WebDriver, *, manager: LangdonManager) -> N
         ).click()
         driver.switch_to.default_content()
         challenge_iframe = wait.WebDriverWait(driver, 60).until(
-            ec.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    "//iframe[@title='recaptcha challenge expires in two minutes']",
-                )
-            )
+            ec.element_to_be_clickable((
+                By.XPATH,
+                "//iframe[@title='recaptcha challenge expires in two minutes']",
+            ))
         )
         driver.switch_to.frame(challenge_iframe)
         driver.find_element(By.ID, "recaptcha-audio-button").click()

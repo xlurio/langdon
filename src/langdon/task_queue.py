@@ -5,8 +5,8 @@ import contextlib
 import json
 import multiprocessing
 import os
-from collections.abc import Callable, Iterator, Sequence
 import time
+from collections.abc import Callable, Iterator, Sequence
 from typing import TypedDict
 
 from langdon.abc import DataFileManagerABC
@@ -39,9 +39,11 @@ def submit_task(
     """
 
     file_manager = TaskQueueFileManager(manager)
-    new_task = json.dumps(
-        {"func": f"{func.__module__}.{func.__name__}", "args": args, "kwargs": kwargs}
-    )
+    new_task = json.dumps({
+        "func": f"{func.__module__}.{func.__name__}",
+        "args": args,
+        "kwargs": kwargs,
+    })
     current_tasks = list(*file_manager.read_data_file()).append(new_task)
     file_manager.write_data_file(current_tasks)
 
@@ -56,24 +58,36 @@ def start_task_executor() -> None:
         file_manager = TaskQueueFileManager(manager)
         while True:
             try:
-                file_manager = TaskQueueFileManager()
-                tasks = file_manager.read_data_file()
-
-                if tasks:
-                    for task in tasks:
-                        func_name = task["func"]
-                        args = task["args"]
-                        kwargs = task["kwargs"]
-
-                        module_name, func_name = func_name.rsplit(".", 1)
-                        module = __import__(module_name, fromlist=[func_name])
-                        func = getattr(module, func_name)
-
-                        executor.submit(func, *args, **kwargs)
-
-                    file_manager.write_data_file([])
+                process_tasks(file_manager, executor)
             except KeyboardInterrupt:
                 break
+
+
+def process_tasks(
+    file_manager: TaskQueueFileManager, executor: CF.ThreadPoolExecutor
+) -> None:
+    """
+    Process tasks from the task queue.
+
+    Args:
+        file_manager (TaskQueueFileManager): The file manager for the task queue.
+        executor (CF.ThreadPoolExecutor): The thread pool executor.
+    """
+    tasks = file_manager.read_data_file()
+
+    if tasks:
+        for task in tasks:
+            func_name = task["func"]
+            args = task["args"]
+            kwargs = task["kwargs"]
+
+            module_name, func_name = func_name.rsplit(".", 1)
+            module = __import__(module_name, fromlist=[func_name])
+            func = getattr(module, func_name)
+
+            executor.submit(func, *args, **kwargs)
+
+        file_manager.write_data_file([])
 
 
 def wait_for_all_tasks_to_finish(*, manager: LangdonManager) -> None:

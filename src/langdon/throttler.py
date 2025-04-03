@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 import random
 import time
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from langdon.abc import DataFileManagerABC

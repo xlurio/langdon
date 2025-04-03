@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import sys
+import tomllib
 from typing import TYPE_CHECKING, TypeVar
 
 import sqlalchemy
-import tomllib
 from sqlalchemy import orm
 
 from langdon.exceptions import LangdonException

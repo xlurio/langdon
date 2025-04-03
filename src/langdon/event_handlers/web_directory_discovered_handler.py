@@ -66,9 +66,14 @@ def _build_cleaned_url(
     web_directory: WebDirectory, cleaned_hostname: str, cleaned_directory_path: str
 ) -> str:
     schema = "https" if web_directory.uses_ssl else "http"
-    return urllib.parse.urlunparse(
-        (schema, cleaned_hostname, cleaned_directory_path, "", "", "")
-    )
+    return urllib.parse.urlunparse((
+        schema,
+        cleaned_hostname,
+        cleaned_directory_path,
+        "",
+        "",
+        "",
+    ))
 
 
 def _analyze_with_whatweb(

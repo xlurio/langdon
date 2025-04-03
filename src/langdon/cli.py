@@ -6,17 +6,17 @@ import sys
 
 from langdon import (
     assetimporter,
+    event_listener,
     graph_generator,
     initializer,
     langdon_logging,
     recon_executor,
+    task_queue,
 )
 from langdon import langdon_argparser as argparser
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
-from langdon import event_listener
 from langdon.output import OutputColor
-from langdon import task_queue
 
 
 def run():

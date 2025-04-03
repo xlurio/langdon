@@ -14,12 +14,12 @@ from langdon.command_executor import (
 )
 from langdon.exceptions import AlreadyInChildThread
 from langdon.langdon_logging import logger
+from langdon.langdon_manager import LangdonManager
 from langdon.models import IpAddress, IpDomainRel
 from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
     from langdon.events import IpAddressDiscovered
-    from langdon.langdon_manager import LangdonManager
     from langdon.models import IpAddressVersionT
 
 
