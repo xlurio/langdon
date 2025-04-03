@@ -123,7 +123,7 @@ def _process_event_queue(
 def start_event_listener() -> None:
     from langdon.langdon_manager import LangdonManager
 
-    max_workers = (os.cpu_count() or 1) * 2
+    max_workers = os.cpu_count() or 1
 
     with CF.ThreadPoolExecutor(max_workers) as executor, LangdonManager() as manager:
         event_queue_manager = EventListenerQueueManager(manager=manager)
