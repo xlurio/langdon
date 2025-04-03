@@ -9,6 +9,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from langdon.abc import DataFileManagerABC
+from langdon.langdon_logging import logger
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -149,6 +150,7 @@ def wait_for_all_events_to_be_handled(*, manager: LangdonManager) -> None:
 @contextlib.contextmanager
 def event_listener_context() -> Iterator[None]:
     process = multiprocessing.Process(target=start_event_listener)
+    logger.debug("Starting event listener process")
 
     try:
         yield process.start()

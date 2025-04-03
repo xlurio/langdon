@@ -10,6 +10,7 @@ from collections.abc import Callable, Iterator, Sequence
 from typing import TypedDict
 
 from langdon.abc import DataFileManagerABC
+from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 
 
@@ -117,6 +118,7 @@ def task_queue_context() -> Iterator[None]:
     Context manager for the task queue.
     """
     process = multiprocessing.Process(target=start_task_executor)
+    logger.debug("Starting task queue process")
 
     try:
         yield process.start()
