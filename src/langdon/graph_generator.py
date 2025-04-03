@@ -68,7 +68,7 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
         directory.domain.name if directory.domain else directory.ip_address.address
     )
     cleaned_directory_path = directory.path.lstrip("/")
-    urllib.parse.urlunparse(
+    return urllib.parse.urlunparse(
         (schema, cleaned_hostname, cleaned_directory_path, "", "", "")
     )
 
