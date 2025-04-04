@@ -101,6 +101,7 @@ def _process_amass_for_domains(known_domains_names: set[str]) -> None:
         for known_domain_name in known_domains_names:
             with (
                 suppress_timeout_expired_error(),
+                suppress_called_process_error(),
                 suppress_duplicated_recon_process(),
                 shell_command_execution_context(
                     CommandData(command="amass", args=f"enum -d {known_domain_name}"),
