@@ -150,6 +150,11 @@ DirHeaderRelId = int
 
 class DirHeaderRel(SqlAlchemyModel):
     __tablename__ = "langdon_dirheaderrels"
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "header_id", "directory_id", name="_header_directory_uc"
+        ),
+    )
 
     id: orm.Mapped[DirHeaderRelId] = orm.mapped_column(primary_key=True)
     header_id: orm.Mapped[int] = orm.mapped_column(
@@ -184,6 +189,11 @@ DirCookieRelId = int
 
 class DirCookieRel(SqlAlchemyModel):
     __tablename__ = "langdon_dircookierels"
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "cookie_id", "directory_id", name="_cookie_directory_uc"
+        ),
+    )
 
     id: orm.Mapped[DirCookieRelId] = orm.mapped_column(primary_key=True)
     cookie_id: orm.Mapped[int] = orm.mapped_column(
