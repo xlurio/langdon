@@ -417,10 +417,11 @@ def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
     webanalyze_bin_path = shutil.which("webanalyze")
     subprocess.run([webanalyze_bin_path, "-update"], check=True)
 
-    _download_android_binaries(manager=manager)
-    task_queue.submit_task(_get_ip_from_known_domains, manager=manager)
-    _discover_domains_from_known_ones_passively(manager=manager)
-    _discover_domains_actively(manager=manager)
-    _discover_content_actively(manager=manager)
+    with task_queue.task_queue_context(), event_listener.event_listener_context():
+        _download_android_binaries(manager=manager)
+        task_queue.submit_task(_get_ip_from_known_domains, manager=manager)
+        _discover_domains_from_known_ones_passively(manager=manager)
+        _discover_domains_actively(manager=manager)
+        _discover_content_actively(manager=manager)
 
     print(f"{OutputColor.GREEN}Reconnaissance finished{OutputColor.RESET}")

@@ -6,12 +6,10 @@ import sys
 
 from langdon import (
     assetimporter,
-    event_listener,
     graph_generator,
     initializer,
     langdon_logging,
     recon_executor,
-    task_queue,
 )
 from langdon import langdon_argparser as argparser
 from langdon.langdon_logging import logger
@@ -43,16 +41,15 @@ def run():
         log_file_handler.setLevel(logging.NOTSET)
         log_file_handler.setFormatter(langdon_logging.log_formatter)
 
-        with task_queue.task_queue_context(), event_listener.event_listener_context():
-            return {
-                "importcsv": lambda: assetimporter.import_from_csv(
-                    parsed_args, manager=manager
-                ),
-                "run": lambda: recon_executor.run_recon(parsed_args, manager=manager),
-                "graph": lambda: graph_generator.generate_graph(
-                    parsed_args, manager=manager
-                ),
-            }[parsed_args.module]()
+        return {
+            "importcsv": lambda: assetimporter.import_from_csv(
+                parsed_args, manager=manager
+            ),
+            "run": lambda: recon_executor.run_recon(parsed_args, manager=manager),
+            "graph": lambda: graph_generator.generate_graph(
+                parsed_args, manager=manager
+            ),
+        }[parsed_args.module]()
 
 
 if __name__ == "__main__":
