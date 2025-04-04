@@ -13,6 +13,7 @@ from sqlalchemy import sql
 from langdon import event_listener, task_queue
 from langdon.command_executor import (
     CommandData,
+    internal_shell_command_execution_context,
     shell_command_execution_context,
     suppress_called_process_error,
     suppress_duplicated_recon_process,
@@ -54,7 +55,7 @@ def _get_ip_from_known_domains() -> None:
                 suppress_timeout_expired_error(),
                 suppress_called_process_error(),
                 suppress_duplicated_recon_process(),
-                shell_command_execution_context(
+                internal_shell_command_execution_context(
                     CommandData(command="host", args=domain.name),
                     manager=manager,
                     timeout=3600,
