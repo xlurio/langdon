@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import concurrent.futures as CF
 import contextlib
-import json
 import multiprocessing
 import os
 import random
+import re
 import time
 from collections.abc import Callable, Iterator, Sequence
-from typing import TypedDict
+from typing import Any, TypedDict
+
+import pydantic
 
 from langdon.abc import DataFileManagerABC
 from langdon.langdon_logging import logger
@@ -19,6 +21,20 @@ class TaskDict(TypedDict):
     func: str
     args: tuple
     kwargs: dict
+
+
+class Task(pydantic.BaseModel):
+    func: str
+    args: tuple[Any, ...]
+    kwargs: dict[str, Any]
+
+    @pydantic.field_validator("func")
+    @classmethod
+    def validate_func(cls, value: str) -> str:
+        function_regex = r"^(?:[a-zA-Z_][a-zA-Z0-9_.]*\.)*[a-zA-Z_][a-zA-Z0-9_]*$"
+        if not re.match(function_regex, value):
+            raise ValueError("Invalid function name")
+        return value
 
 
 class TaskQueueFileManager(DataFileManagerABC[Sequence[TaskDict]]):
@@ -41,14 +57,12 @@ def submit_task(
     """
 
     file_manager = TaskQueueFileManager(manager)
-    new_task = json.dumps(
-        {
-            "func": f"{func.__module__}.{func.__name__}",
-            "args": args,
-            "kwargs": kwargs,
-        }
+    new_task = Task(
+        func=f"{func.__module__}.{func.__name__}",
+        args=args,
+        kwargs=kwargs,
     )
-    current_tasks = list(file_manager.read_data_file()) + [new_task]
+    current_tasks = list(file_manager.read_data_file()) + [new_task.model_dump("json")]
     file_manager.write_data_file(current_tasks)
 
 
@@ -84,16 +98,14 @@ def process_tasks(
     if tasks:
         futures = []
 
-        for task in tasks:
-            func_name = task["func"]
-            args = task["args"]
-            kwargs = task["kwargs"]
+        for raw_task in tasks:
+            task = Task.model_validate(raw_task)
 
-            module_name, func_name = func_name.rsplit(".", 1)
+            module_name, func_name = task.func.rsplit(".", 1)
             module = __import__(module_name, fromlist=[func_name])
             func = getattr(module, func_name)
 
-            futures.append(executor.submit(func, *args, **kwargs))
+            futures.append(executor.submit(func, *task.args, **task.kwargs))
 
         CF.wait(futures)
         file_manager.write_data_file([])
