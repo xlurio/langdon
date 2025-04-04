@@ -151,9 +151,12 @@ def event_listener_context() -> Iterator[None]:
         process.join()
 
 
-def wait_for_all_events_to_be_handled(*, manager: LangdonManager) -> None:
+def wait_for_all_events_to_be_handled(
+    *, manager: LangdonManager, timeout: int | None = None
+) -> None:
     """Wait for all events to be handled."""
     logger.debug("Waiting for all events to be handled")
+    end_time = (time.time() + timeout) if timeout else None
 
     event_queue_manager = EventListenerQueueManager(manager=manager)
     is_event_queue_empty = False
@@ -163,6 +166,12 @@ def wait_for_all_events_to_be_handled(*, manager: LangdonManager) -> None:
 
         queue = event_queue_manager.read_data_file()
         is_event_queue_empty = not queue
+
+        if end_time and time.time() > end_time:
+            logger.warning(
+                "Timeout reached while waiting for events to be handled, continuing"
+            )
+            break
 
 
 def send_event_message(event: T, *, manager: LangdonManager) -> None:

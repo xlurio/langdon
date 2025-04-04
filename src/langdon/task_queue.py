@@ -113,7 +113,9 @@ def process_tasks(
         file_manager.write_data_file([])
 
 
-def wait_for_all_tasks_to_finish(*, manager: LangdonManager) -> None:
+def wait_for_all_tasks_to_finish(
+    *, manager: LangdonManager, timeout: int | None
+) -> None:
     """
     Wait for all tasks in the queue to finish.
 
@@ -122,6 +124,7 @@ def wait_for_all_tasks_to_finish(*, manager: LangdonManager) -> None:
         timeout (int): The maximum time to wait for tasks to finish.
     """
     logger.debug("Waiting for all tasks to finish")
+    end_time = (time.time() + timeout) if timeout else None
 
     file_manager = TaskQueueFileManager(manager)
     is_task_queue_empty = False
@@ -131,6 +134,12 @@ def wait_for_all_tasks_to_finish(*, manager: LangdonManager) -> None:
 
         tasks = file_manager.read_data_file()
         is_task_queue_empty = not tasks
+
+        if end_time and time.time() > end_time:
+            logger.warning(
+                "Timeout reached while waiting for tasks to finish, continuing"
+            )
+            break
 
 
 @contextlib.contextmanager

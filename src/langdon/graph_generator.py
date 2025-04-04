@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import graphviz
 from sqlalchemy import sql
 
+from langdon.langdon_logging import logger
 from langdon.models import (
     DirCookieRel,
     DirHeaderRel,
@@ -54,17 +55,7 @@ def generate_graph(
     """
     Generate a graph of the known assets using the Graphviz library.
     """
-    dot = graphviz.Digraph(
-        name="langdon_graph",
-        engine="sfdp",
-        strict=True,
-        graph_attr={
-            "concentrate": "true",
-            "mode": "sgd",
-            "overlap": "prism",
-            "splines": "true",
-        },
-    )
+    dot = graphviz.Digraph(name="langdon_graph", engine="fdp", strict=True)
 
     add_domains(dot, manager)
     add_ip_addresses(dot, manager)
@@ -80,6 +71,7 @@ def generate_graph(
     add_web_dir_tech_relationships(dot, manager)
     add_port_tech_relationships(dot, manager)
 
+    logger.info("Rendering the graph.")
     dot.render(
         parsed_args.output.with_suffix(""),
         format=parsed_args.output.suffix.replace(".", ""),
@@ -108,6 +100,7 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
 
 
 def add_domains(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding domains to the graph.")
     domains_query = sql.select(Domain)
     for domain in manager.session.scalars(domains_query):
         color = _get_node_color(domain.name)
@@ -115,6 +108,7 @@ def add_domains(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 
 
 def add_ip_addresses(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding IP addresses to the graph.")
     ip_address_query = sql.select(IpAddress)
     for ip_address in manager.session.scalars(ip_address_query):
         color = _get_node_color(ip_address.address)
@@ -128,6 +122,7 @@ def add_ip_addresses(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 
 
 def add_ip_domain_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding IP-domain relationships to the graph.")
     ip_address_domain_rel_query = (
         sql.select(IpDomainRel).join(IpDomainRel.domain).join(IpDomainRel.ip_address)
     )
@@ -139,6 +134,7 @@ def add_ip_domain_relationships(dot: graphviz.Digraph, manager: LangdonManager) 
 
 
 def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding web directories to the graph.")
     web_directories_query = (
         sql.select(WebDirectory)
         .join(WebDirectory.domain, isouter=True)
@@ -159,6 +155,7 @@ def add_web_directories(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 
 
 def add_http_headers(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding HTTP headers to the graph.")
     http_headers_query = sql.select(HttpHeader)
     for http_header in manager.session.scalars(http_headers_query):
         dot.node(http_header.name, shape="parallelogram")
@@ -167,6 +164,7 @@ def add_http_headers(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 def add_dir_header_relationships(
     dot: graphviz.Digraph, manager: LangdonManager
 ) -> None:
+    logger.info("Adding directory-header relationships to the graph.")
     dir_header_rel_query = (
         sql.select(DirHeaderRel)
         .join(DirHeaderRel.directory)
@@ -184,6 +182,7 @@ def add_dir_header_relationships(
 
 
 def add_http_cookies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding HTTP cookies to the graph.")
     http_cookies_query = sql.select(HttpCookie)
     for http_cookie in manager.session.scalars(http_cookies_query):
         dot.node(http_cookie.name, shape="trapezium")
@@ -192,6 +191,7 @@ def add_http_cookies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 def add_dir_cookie_relationships(
     dot: graphviz.Digraph, manager: LangdonManager
 ) -> None:
+    logger.info("Adding directory-cookie relationships to the graph.")
     dir_cookie_rel_query = (
         sql.select(DirCookieRel)
         .join(DirCookieRel.directory)
@@ -209,6 +209,7 @@ def add_dir_cookie_relationships(
 
 
 def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding used ports to the graph.")
     used_ports_query = (
         sql.select(UsedPort)
         .join(WebDirectory.domain, isouter=True)
@@ -221,12 +222,14 @@ def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 
 
 def add_technologies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding technologies to the graph.")
     techonologies_query = sql.select(Technology)
     for technology in manager.session.scalars(techonologies_query):
         dot.node(f"{technology.name} {technology.version or ''}", shape="octagon")
 
 
 def add_vulnerabilities(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding vulnerabilities to the graph.")
     vulnerabilities_query = sql.select(Vulnerability).join(Vulnerability.technology)
     for vulnerability in manager.session.scalars(vulnerabilities_query):
         dot.node(vulnerability.name, shape="hexagon")
@@ -239,6 +242,7 @@ def add_vulnerabilities(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 def add_web_dir_tech_relationships(
     dot: graphviz.Digraph, manager: LangdonManager
 ) -> None:
+    logger.info("Adding web directory-technology relationships to the graph.")
     web_dir_tech_rel_query = (
         sql.select(WebDirTechRel)
         .join(WebDirTechRel.directory)
@@ -254,6 +258,7 @@ def add_web_dir_tech_relationships(
 
 
 def add_port_tech_relationships(dot: graphviz.Digraph, manager: LangdonManager) -> None:
+    logger.info("Adding port-technology relationships to the graph.")
     port_tech_rel_query = (
         sql.select(PortTechRel).join(PortTechRel.port).join(PortTechRel.technology)
     )

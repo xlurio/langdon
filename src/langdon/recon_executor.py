@@ -81,35 +81,36 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
         temp_file.seek(0)
 
         task_queue.submit_task(
-            _process_amass_for_domains_file, temp_file.name, manager=manager
+            _process_amass_for_domains, known_domains_names, manager=manager
         )
         task_queue.submit_task(_process_subfinder, temp_file.name, manager=manager)
         task_queue.submit_task(
             _process_assetfinder_for_domains, known_domains_names, manager=manager
         )
 
-        task_queue.wait_for_all_tasks_to_finish(manager=manager)
-        event_listener.wait_for_all_events_to_be_handled(manager=manager)
+        task_queue.wait_for_all_tasks_to_finish(manager=manager, timeout=10800)
+        event_listener.wait_for_all_events_to_be_handled(manager=manager, timeout=10800)
 
 
-def _process_amass_for_domains_file(domains_file_path: str) -> None:
+def _process_amass_for_domains(known_domains_names: set[str]) -> None:
     amass_domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)*[^.\s]+) \(FQDN\)")
     amass_ip_address_regex = re.compile(
         r"(?P<ip_address>(?:\d{1,3}\.){3}\d{1,3}) \(IPAddress\)"
     )
-    with (
-        LangdonManager() as manager,
-        suppress_timeout_expired_error(),
-        suppress_duplicated_recon_process(),
-        shell_command_execution_context(
-            CommandData(command="amass", args=f"enum -df {domains_file_path}"),
-            manager=manager,
-            timeout=3600,
-        ) as output,
-    ):
-        for line in output.splitlines():
-            _process_amass_line_for_domains(line, amass_domain_regex, manager)
-            _process_amass_line_for_ips(line, amass_ip_address_regex, manager)
+    with LangdonManager() as manager:
+        for known_domain_name in known_domains_names:
+            with (
+                suppress_timeout_expired_error(),
+                suppress_duplicated_recon_process(),
+                shell_command_execution_context(
+                    CommandData(command="amass", args=f"enum -d {known_domain_name}"),
+                    manager=manager,
+                    timeout=3600,
+                ) as output,
+            ):
+                for line in output.splitlines():
+                    _process_amass_line_for_domains(line, amass_domain_regex, manager)
+                    _process_amass_line_for_ips(line, amass_ip_address_regex, manager)
 
 
 def _process_amass_line_for_domains(
