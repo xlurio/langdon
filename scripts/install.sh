@@ -160,6 +160,10 @@ pip install --user supervisor
 exec "$SHELL"
 echo_supervisord_conf > /etc/supervisord.conf
 echo '
-[program:langdon]
+[program:langdon-run]
 command=poetry run --project="'$HOME'/langdon" --directory="'$HOME'/recon" langdon -- --loglevel DEBUG run
+
+[program:langdon-graph]
+command=poetry run --project="'$HOME'/langdon" --directory="'$HOME'/recon" langdon -- --loglevel DEBUG graph
+autostart=true
 ' >> /etc/supervisord.conf
