@@ -72,7 +72,7 @@ def start_task_executor() -> None:
     """
     Continuously execute tasks from the queue.
     """
-    max_workers = os.cpu_count() or 1
+    max_workers = (os.cpu_count() or 1) / 2
 
     with CF.ThreadPoolExecutor(max_workers) as executor, LangdonManager() as manager:
         file_manager = TaskQueueFileManager(manager)
