@@ -80,9 +80,7 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
         temp_file.write("\n".join(known_domains_names))
         temp_file.seek(0)
 
-        task_queue.submit_task(
-            _process_amass_for_domains, known_domains_names, manager=manager
-        )
+        _process_amass_for_domains(known_domains_names, manager=manager)
         task_queue.submit_task(_process_subfinder, temp_file.name, manager=manager)
         task_queue.submit_task(
             _process_assetfinder_for_domains, known_domains_names, manager=manager
@@ -92,7 +90,19 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
         event_listener.wait_for_all_events_to_be_handled(manager=manager, timeout=10800)
 
 
-def _process_amass_for_domains(known_domains_names: set[str]) -> None:
+def _process_amass_for_domains(
+    known_domains_names: set[str], *, manager: LangdonManager
+) -> None:
+    CHUNK_SIZE = 10
+
+    for index in range(0, len(known_domains_names), CHUNK_SIZE):
+        chunk_start = index * CHUNK_SIZE
+        chunk_end = (index + 1) * CHUNK_SIZE
+        chunk = known_domains_names[chunk_start:chunk_end]
+        task_queue.submit_task(_process_amass_for_chunk, chunk, manager=manager)
+
+
+def _process_amass_for_chunk(known_domains_names: set[str]) -> None:
     amass_domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)*[^.\s]+) \(FQDN\)")
     amass_ip_address_regex = re.compile(
         r"(?P<ip_address>(?:(?:\d{1,3}\.){3}\d{1,3})|(?:[A-Fa-f0-9:]+)) \(IPAddress\)"
