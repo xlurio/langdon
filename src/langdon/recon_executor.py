@@ -88,8 +88,8 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
             _process_assetfinder_for_domains, known_domains_names, manager=manager
         )
 
-    task_queue.wait_for_all_tasks_to_finish(manager=manager)
-    event_listener.wait_for_all_events_to_be_handled(manager=manager)
+        task_queue.wait_for_all_tasks_to_finish(manager=manager)
+        event_listener.wait_for_all_events_to_be_handled(manager=manager)
 
 
 def _process_amass_for_domains_file(domains_file_path: str) -> None:
