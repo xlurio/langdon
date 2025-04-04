@@ -36,13 +36,14 @@ def run():
         return initializer.initialize(parsed_args)
 
     with LangdonManager() as manager:
-        log_file_handler = logging.FileHandler(manager.config["log_file"])
+        log_file_handler = logging.FileHandler(
+            manager.config["log_file"] + f".{parsed_args.module}"
+        )
         logger.addHandler(log_file_handler)
         log_file_handler.setLevel(logging.NOTSET)
         log_file_handler.setFormatter(langdon_logging.log_formatter)
 
         with task_queue.task_queue_context(), event_listener.event_listener_context():
-
             return {
                 "importcsv": lambda: assetimporter.import_from_csv(
                     parsed_args, manager=manager
