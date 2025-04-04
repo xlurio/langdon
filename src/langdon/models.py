@@ -78,6 +78,11 @@ IpDomainRelId = int
 
 class IpDomainRel(SqlAlchemyModel):
     __tablename__ = "langdon_ipdomainrels"
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "ip_id", "domain_id", name="_ip_domain_uc"
+        ),
+    )
 
     id: orm.Mapped[IpDomainRelId] = orm.mapped_column(primary_key=True)
     ip_id: orm.Mapped[int] = orm.mapped_column(
@@ -281,6 +286,11 @@ WebDirTechRelId = int
 
 class WebDirTechRel(SqlAlchemyModel):
     __tablename__ = "langdon_webdirtechrels"
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "directory_id", "technology_id", name="_directory_technology_uc"
+        ),
+    )
 
     id: orm.Mapped[WebDirTechRelId] = orm.mapped_column(primary_key=True)
     directory_id: orm.Mapped[int] = orm.mapped_column(
@@ -302,6 +312,11 @@ PortTechRelId = int
 
 class PortTechRel(SqlAlchemyModel):
     __tablename__ = "langdon_porttechrels"
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "port_id", "technology_id", name="_port_technology_uc"
+        ),
+    )
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     port_id: orm.Mapped[int] = orm.mapped_column(
