@@ -31,10 +31,7 @@ class DataFileManagerABC(abc.ABC, Generic[T]):
     def read_data_file(self) -> T:
         with self.__process_queue_lock, self.__thread_queue_lock:
             try:
-                return (
-                    json.loads(self.__data_file_path.read_text())
-                    or self.get_default_file_initial_value()
-                )
+                return json.loads(self.__data_file_path.read_text())
 
             except json.JSONDecodeError:
                 logger.warning(
@@ -47,6 +44,14 @@ class DataFileManagerABC(abc.ABC, Generic[T]):
         return self.get_default_file_initial_value()
 
     def write_data_file(self, data: T) -> None:
+        is_data_iterable = hasattr(data, "__iter__") and not isinstance(data, str)
+        is_data_mapping = hasattr(data, "keys") and not isinstance(data, str)
+
+        if not is_data_iterable and not is_data_mapping:
+            raise TypeError(
+                f"Data must be iterable or mapping, got {type(data).__name__}"
+            )
+
         with self.__process_queue_lock, self.__thread_queue_lock:
             self.__data_file_path.write_text(json.dumps(data))
 

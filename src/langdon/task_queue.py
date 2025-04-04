@@ -48,7 +48,7 @@ def submit_task(
             "kwargs": kwargs,
         }
     )
-    current_tasks = list(file_manager.read_data_file()).append(new_task)
+    current_tasks = list(file_manager.read_data_file()) + [new_task]
     file_manager.write_data_file(current_tasks)
 
 
