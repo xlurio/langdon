@@ -93,12 +93,12 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
 def _process_amass_for_domains(
     known_domains_names: set[str], *, manager: LangdonManager
 ) -> None:
-    CHUNK_SIZE = 10
+    CHUNK_SIZE = 1
 
     for index in range(0, len(known_domains_names), CHUNK_SIZE):
         chunk_start = index * CHUNK_SIZE
         chunk_end = (index + 1) * CHUNK_SIZE
-        chunk = known_domains_names[chunk_start:chunk_end]
+        chunk = list(known_domains_names)[chunk_start:chunk_end]
         task_queue.submit_task(_process_amass_for_chunk, chunk, manager=manager)
 
 
