@@ -113,11 +113,10 @@ def wait_for_all_tasks_to_finish(*, manager: LangdonManager) -> None:
     is_task_queue_empty = False
 
     while not is_task_queue_empty:
+        time.sleep(random.randint(1, 3))
+
         tasks = file_manager.read_data_file()
         is_task_queue_empty = not tasks
-
-        if not is_task_queue_empty:
-            time.sleep(random.randint(1, 3))
 
 
 @contextlib.contextmanager

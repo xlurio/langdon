@@ -159,11 +159,10 @@ def wait_for_all_events_to_be_handled(*, manager: LangdonManager) -> None:
     is_event_queue_empty = False
 
     while not is_event_queue_empty:
+        time.sleep(random.randint(1, 3))
+
         queue = event_queue_manager.read_data_file()
         is_event_queue_empty = not queue
-
-        if not is_event_queue_empty:
-            time.sleep(random.randint(1, 3))
 
 
 def send_event_message(event: T, *, manager: LangdonManager) -> None:
