@@ -95,7 +95,7 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
 def _process_amass_for_domains(known_domains_names: set[str]) -> None:
     amass_domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)*[^.\s]+) \(FQDN\)")
     amass_ip_address_regex = re.compile(
-        r"(?P<ip_address>(?:\d{1,3}\.){3}\d{1,3}) \(IPAddress\)"
+        r"(?P<ip_address>(?:(?:\d{1,3}\.){3}\d{1,3})|(?:[A-Fa-f0-9:]+)) \(IPAddress\)"
     )
     with LangdonManager() as manager:
         for known_domain_name in known_domains_names:
