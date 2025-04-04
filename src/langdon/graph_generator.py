@@ -55,7 +55,7 @@ def generate_graph(
     """
     Generate a graph of the known assets using the Graphviz library.
     """
-    dot = graphviz.Digraph(name="langdon_graph", engine="fdp", strict=True)
+    dot = graphviz.Digraph(name="langdon_graph", engine="sfdp", strict=True)
 
     add_domains(dot, manager)
     add_ip_addresses(dot, manager)
