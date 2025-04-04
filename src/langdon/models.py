@@ -62,6 +62,7 @@ class IpAddress(SqlAlchemyModel):
     id: orm.Mapped[IpAddressId] = orm.mapped_column(primary_key=True)
     address: orm.Mapped[str] = orm.mapped_column(unique=True)
     version: orm.Mapped[IpAddressVersionT]
+    was_known: orm.Mapped[bool] = orm.mapped_column(default=False)
     domain_relationships: orm.Mapped[list[IpDomainRel]] = orm.relationship(
         back_populates="ip_address", cascade="all, delete-orphan"
     )

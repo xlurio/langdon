@@ -13,7 +13,6 @@ from sqlalchemy import sql
 from langdon import event_listener, task_queue
 from langdon.command_executor import (
     CommandData,
-    internal_shell_command_execution_context,
     shell_command_execution_context,
     suppress_called_process_error,
     suppress_duplicated_recon_process,
@@ -22,7 +21,7 @@ from langdon.command_executor import (
 from langdon.events import DomainDiscovered, IpAddressDiscovered, WebDirectoryDiscovered
 from langdon.exceptions import LangdonProgrammingError
 from langdon.langdon_manager import LangdonManager
-from langdon.models import AndroidApp, Domain, WebDirectory
+from langdon.models import AndroidApp, Domain, IpAddress, WebDirectory
 from langdon.output import OutputColor
 
 if TYPE_CHECKING:
@@ -43,33 +42,6 @@ def _download_android_binaries(*, manager: LangdonManager) -> None:
             ),
         ):
             ...
-
-
-def _get_ip_from_known_domains() -> None:
-    with LangdonManager() as manager:
-        known_domains_query = sql.select(Domain).where(Domain.was_known == True)
-        known_domains = set(manager.session.scalars(known_domains_query))
-
-        for domain in known_domains:
-            with (
-                suppress_timeout_expired_error(),
-                suppress_called_process_error(),
-                suppress_duplicated_recon_process(),
-                internal_shell_command_execution_context(
-                    CommandData(command="host", args=domain.name),
-                    manager=manager,
-                    timeout=3600,
-                ) as result,
-            ):
-                for line in result.splitlines():
-                    if "has address" in line:
-                        ip_address = line.split()[-1]
-                        event_listener.send_event_message(
-                            manager.get_event_by_name("IpAddressDiscovered")(
-                                address=ip_address, domain_id=domain.id
-                            ),
-                            manager=manager,
-                        )
 
 
 def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> None:
@@ -405,6 +377,24 @@ def _discover_content_with_gobuster(
                     )
 
 
+def _process_known_domains(*, manager: LangdonManager) -> None:
+    known_domains_query = sql.select(Domain.name).where(Domain.was_known == True)
+    for domain_name in manager.session.scalars(known_domains_query):
+        event_listener.send_event_message(
+            DomainDiscovered(name=domain_name), manager=manager
+        )
+
+
+def _process_known_ip_addresses(*, manager: LangdonManager) -> None:
+    known_ip_addresses_query = sql.select(IpAddress.address).where(
+        IpAddress.was_known == True
+    )
+    for ip_address in manager.session.scalars(known_ip_addresses_query):
+        event_listener.send_event_message(
+            IpAddressDiscovered(address=ip_address), manager=manager
+        )
+
+
 def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
     if args.openvpn:
         openvpn_bin_path = shutil.which("openvpn")
@@ -419,7 +409,8 @@ def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
 
     with task_queue.task_queue_context(), event_listener.event_listener_context():
         _download_android_binaries(manager=manager)
-        task_queue.submit_task(_get_ip_from_known_domains, manager=manager)
+        _process_known_domains(manager=manager)
+        _process_known_ip_addresses(manager=manager)
         _discover_domains_from_known_ones_passively(manager=manager)
         _discover_domains_actively(manager=manager)
         _discover_content_actively(manager=manager)

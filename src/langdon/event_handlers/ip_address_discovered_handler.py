@@ -16,17 +16,10 @@ from langdon.exceptions import AlreadyInChildThread
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 from langdon.models import Domain, IpAddress, IpAddressId, IpDomainRel
-from langdon.utils import create_if_not_exist
+from langdon.utils import create_if_not_exist, detect_ip_version
 
 if TYPE_CHECKING:
     from langdon.events import IpAddressDiscovered
-    from langdon.models import IpAddressVersionT
-
-
-def _detect_ip_version(ip_address: str) -> IpAddressVersionT:
-    if ":" in ip_address:
-        return "ipv6"
-    return "ipv4"
 
 
 def _process_nmap_output(
@@ -107,7 +100,7 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
 
 
 def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None:
-    ip_version = _detect_ip_version(event.address)
+    ip_version = detect_ip_version(event.address)
 
     was_already_discovered = create_if_not_exist(
         IpAddress,

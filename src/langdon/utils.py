@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from langdon.langdon_manager import LangdonManager
-    from langdon.models import SqlAlchemyModel
+    from langdon.models import IpAddressVersionT, SqlAlchemyModel
 
 
 def create_if_not_exist(
@@ -37,3 +37,9 @@ def create_if_not_exist(
     session.commit()
 
     return True
+
+
+def detect_ip_version(ip_address: str) -> IpAddressVersionT:
+    if ":" in ip_address:
+        return "ipv6"
+    return "ipv4"
