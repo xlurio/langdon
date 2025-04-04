@@ -132,14 +132,16 @@ def _enumerate_web_directories(
                 manager.get_event_by_name("TechnologyDiscovered")(
                     name=row["firewall"],
                     version=None,
-                    domain_id=domain.id,
-                    ip_address_id=ip_address.id,
+                    domain_id=domain.id if domain else None,
+                    ip_address_id=event.ip_address_id,
                 ),
                 manager=manager,
             )
 
 
-def _process_http_port(event: PortDiscovered, ip_address_obj: IpAddress, *, manager: LangdonManager) -> None:
+def _process_http_port(
+    event: PortDiscovered, ip_address_obj: IpAddress, *, manager: LangdonManager
+) -> None:
     def process_domains(domains: Sequence[Domain]):
         for domain in domains:
             event_listener.send_event_message(
@@ -222,7 +224,11 @@ def _process_other_ports(
 
 
 def _process_found_port(
-    port_obj: UsedPort, ip_address_obj: IpAddress, event: PortDiscovered, *, manager: LangdonManager
+    port_obj: UsedPort,
+    ip_address_obj: IpAddress,
+    event: PortDiscovered,
+    *,
+    manager: LangdonManager,
 ) -> None:
     is_http = (event.port in HTTP_PORTS) and (event.transport_layer_protocol == "tcp")
 
@@ -241,9 +247,7 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
         defaults={"is_filtered": event.is_filtered},
         manager=manager,
     )
-    ip_address_query = sql.select(IpAddress).where(
-        IpAddress.id == event.ip_address_id
-    )
+    ip_address_query = sql.select(IpAddress).where(IpAddress.id == event.ip_address_id)
     ip_address_obj = manager.session.execute(ip_address_query).scalar_one_or_none()
 
     logger.info(
