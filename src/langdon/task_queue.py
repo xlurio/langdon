@@ -62,7 +62,9 @@ def submit_task(
         args=args,
         kwargs=kwargs,
     )
-    current_tasks = list(file_manager.read_data_file()) + [new_task.model_dump("json")]
+    current_tasks = list(file_manager.read_data_file()) + [
+        new_task.model_dump(mode="json")
+    ]
     file_manager.write_data_file(current_tasks)
 
 
