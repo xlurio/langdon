@@ -80,15 +80,19 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
         temp_file.write("\n".join(known_domains_names))
         temp_file.seek(0)
 
-        _process_amass_for_domains(known_domains_names, manager)
+        task_queue.submit_task(
+            _process_amass_for_domains_file, temp_file.name, manager=manager
+        )
         task_queue.submit_task(_process_subfinder, temp_file.name, manager=manager)
-        _process_assetfinder_for_domains(known_domains_names, manager)
+        task_queue.submit_task(
+            _process_assetfinder_for_domains, known_domains_names, manager=manager
+        )
 
     task_queue.wait_for_all_tasks_to_finish(manager=manager)
     event_listener.wait_for_all_events_to_be_handled(manager=manager)
 
 
-def _process_amass_for_domain(domain: str) -> None:
+def _process_amass_for_domains_file(domains_file_path: str) -> None:
     amass_domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)*[^.\s]+) \(FQDN\)")
     amass_ip_address_regex = re.compile(
         r"(?P<ip_address>(?:\d{1,3}\.){3}\d{1,3}) \(IPAddress\)"
@@ -98,7 +102,7 @@ def _process_amass_for_domain(domain: str) -> None:
         suppress_timeout_expired_error(),
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
-            CommandData(command="amass", args=f"enum -d {domain}"),
+            CommandData(command="amass", args=f"enum -df {domains_file_path}"),
             manager=manager,
             timeout=3600,
         ) as output,
@@ -137,11 +141,6 @@ def _process_amass_line_for_ips(
         )
 
 
-def _process_amass_for_domains(domain_names: set[str], manager: LangdonManager) -> None:
-    for domain_name in domain_names:
-        task_queue.submit_task(_process_amass_for_domain, domain_name, manager=manager)
-
-
 def _process_subfinder(temp_file_name: str) -> None:
     with (
         LangdonManager() as manager,
@@ -158,29 +157,24 @@ def _process_subfinder(temp_file_name: str) -> None:
                 )
 
 
-def _process_assetfinder_for_domain(domain_name: str) -> None:
-    with (
-        LangdonManager() as manager,
-        suppress_duplicated_recon_process(),
-        shell_command_execution_context(
-            CommandData(command="assetfinder", args=f"-subs-only {domain_name}"),
-            manager=manager,
-        ) as output,
-    ):
-        for discovered_domain_name in output.splitlines():
-            if discovered_domain_name:
-                event_listener.send_event_message(
-                    DomainDiscovered(name=discovered_domain_name), manager=manager
-                )
-
-
-def _process_assetfinder_for_domains(
-    known_domains_names: list[str], manager: LangdonManager
-) -> None:
-    for known_domain_name in known_domains_names:
-        task_queue.submit_task(
-            _process_assetfinder_for_domain, known_domain_name, manager=manager
-        )
+def _process_assetfinder_for_domains(known_domains_names: list[str]) -> None:
+    with LangdonManager() as manager:
+        for known_domain_name in known_domains_names:
+            with (
+                suppress_duplicated_recon_process(),
+                shell_command_execution_context(
+                    CommandData(
+                        command="assetfinder", args=f"-subs-only {known_domain_name}"
+                    ),
+                    manager=manager,
+                ) as output,
+            ):
+                for discovered_domain_name in output.splitlines():
+                    if discovered_domain_name:
+                        event_listener.send_event_message(
+                            DomainDiscovered(name=discovered_domain_name),
+                            manager=manager,
+                        )
 
 
 def _discover_domains_actively(*, manager: LangdonManager) -> None:
