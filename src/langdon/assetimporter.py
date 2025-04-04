@@ -45,7 +45,7 @@ def _turn_wildcard_into_domain(wildcard: str) -> str:
 
 
 def import_from_csv(args: ImportCSVNamespace, *, manager: LangdonManager) -> None:
-    raw_dataframe = pd.read_csv(args.csv_file)
+    raw_dataframe = pd.read_csv(args.csv_file)[["identifier", "asset_type"]]
     _process_wildcards(raw_dataframe)
     _process_cidrs(raw_dataframe)
     _import_domains(raw_dataframe, manager=manager)
