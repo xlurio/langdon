@@ -96,8 +96,8 @@ def _process_amass_for_domains(
     CHUNK_SIZE = 10
 
     for index in range(0, len(known_domains_names), CHUNK_SIZE):
-        chunk_start = index * CHUNK_SIZE
-        chunk_end = (index + 1) * CHUNK_SIZE
+        chunk_start = index
+        chunk_end = index + CHUNK_SIZE
         chunk = list(known_domains_names)[chunk_start:chunk_end]
         task_queue.submit_task(_process_amass_for_chunk, chunk, manager=manager)
 
