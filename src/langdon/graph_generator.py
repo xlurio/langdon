@@ -106,7 +106,10 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
 
 def add_domains(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     logger.info("Adding domains to the graph.")
-    domains_query = sql.select(Domain)
+    ip_address_domain_rel_query = sql.select(IpDomainRel.domain_id)
+    domains_query = sql.select(Domain).where(
+        Domain.id.in_(ip_address_domain_rel_query)
+    )
     for domain in manager.session.scalars(domains_query):
         color = _get_node_color(domain.name)
         dot.node(domain.name, shape="box", color=color, fontcolor=color)
