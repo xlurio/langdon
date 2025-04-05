@@ -3,9 +3,11 @@ from __future__ import annotations
 import logging
 import pathlib
 import sys
+import typing
 
 from langdon import (
     assetimporter,
+    crud_executor,
     graph_generator,
     initializer,
     langdon_logging,
@@ -14,6 +16,7 @@ from langdon import (
 from langdon import langdon_argparser as argparser
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
+from langdon.langdon_t import CrudModuleT
 from langdon.output import OutputColor
 
 
@@ -49,6 +52,12 @@ def run():
             "graph": lambda: graph_generator.generate_graph(
                 parsed_args, manager=manager
             ),
+            **{
+                model_module: lambda: crud_executor.execute_crud_operation(
+                    parsed_args, manager=manager
+                )
+                for model_module in typing.get_args(CrudModuleT)
+            },
         }[parsed_args.module]()
 
 

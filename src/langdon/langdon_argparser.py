@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import argparse
+import functools
+import json
 import pathlib
 import sys
-from collections.abc import Callable, Iterator
-from typing import Literal
+import typing
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+from langdon.langdon_t import CrudModuleT
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from typing import Literal
 
 
 class LangdonNamespace(argparse.Namespace):
@@ -108,6 +117,58 @@ def _make_graph_parser(
     )
 
 
+def _make_crud_parser_factory(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+    *,
+    model: CrudModuleT,
+):
+    crud_parser = subparsers.add_parser(
+        model, help=f"CRUD operations for {model} module"
+    )
+
+    abc_writing_parser = argparse.ArgumentParser()
+    abc_writing_parser.add_argument(
+        "data",
+        type=json.loads,
+        help="Data to create the object. The data should be a JSON string.",
+    )
+    abc_detail_parser = argparse.ArgumentParser()
+    abc_detail_parser.add_argument(
+        "id",
+        type=int,
+        help="ID of the object to act. The ID should be an integer.",
+    )
+
+    crud_subparsers = crud_parser.add_subparsers(dest="operation")
+    crud_subparsers.add_parser(
+        "create", help=f"Create a new {model} object", parents=[abc_writing_parser]
+    )
+    crud_subparsers.add_parser(
+        "update",
+        help=f"Update an existing {model} object",
+        parents=[abc_writing_parser, abc_detail_parser],
+    )
+    crud_subparsers.add_parser(
+        "delete", help=f"Delete an existing {model} object", parents=[abc_detail_parser]
+    )
+    list_parser = crud_subparsers.add_parser("list", help=f"List all {model} objects")
+    list_parser.add_argument(
+        "--filter",
+        "-f",
+        type=json.loads,
+        help="Filter to apply to the list. The filter should be a JSON string.",
+    )
+    list_parser.add_argument(
+        "--limit",
+        "-l",
+        type=int,
+        help="Limit the number of objects to return. The limit should be an integer.",
+    )
+    crud_subparsers.add_parser(
+        "retrieve", help=f"Get details of a {model} object", parents=[abc_detail_parser]
+    )
+
+
 ModuleParserFactory = Callable[
     ["argparse._SubParsersAction[argparse.ArgumentParser]"], None
 ]
@@ -118,6 +179,9 @@ def _iter_module_parser_factories() -> Iterator[ModuleParserFactory]:
     yield _make_importcsv_parser
     yield _make_run_parser
     yield _make_graph_parser
+
+    for model_module in typing.get_args(CrudModuleT):
+        yield functools.partial(_make_crud_parser_factory, model=model_module)
 
 
 def parse_args() -> LangdonNamespace:

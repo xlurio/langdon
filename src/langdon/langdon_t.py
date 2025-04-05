@@ -14,3 +14,24 @@ ConfigurationKeyT = Literal[
     "user_agent",
     "web_directory_screenshots",
 ]
+
+CrudModuleT = Literal[
+    "reconprocess",
+    "domain",
+    "androidapp",
+    "ipaddress",
+    "ipdomainrel",
+    "webdirectory",
+    "httpheader",
+    "dirheaderrel",
+    "httpcookie",
+    "dircookierel",
+    "webdirectoryscreenshot",
+    "usedport",
+    "technology",
+    "webdirtechrel",
+    "porttechrel",
+    "vulnerability",
+]
+
+JsonSerializablePrimitiveT = int | float | str | None | bool
