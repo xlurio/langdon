@@ -123,18 +123,18 @@ def _make_crud_parser_factory(
     model: CrudModuleT,
 ):
     crud_parser = subparsers.add_parser(
-        model, help=f"CRUD operations for {model} module"
+        model, help=f"CRUD operations for {model} table"
     )
 
-    abc_writing_parser = argparse.ArgumentParser()
+    abc_writing_parser = argparse.ArgumentParser(add_help=False)
     abc_writing_parser.add_argument(
-        "data",
+        "--data",
         type=json.loads,
         help="Data to create the object. The data should be a JSON string.",
     )
-    abc_detail_parser = argparse.ArgumentParser()
+    abc_detail_parser = argparse.ArgumentParser(add_help=False)
     abc_detail_parser.add_argument(
-        "id",
+        "--id",
         type=int,
         help="ID of the object to act. The ID should be an integer.",
     )
@@ -154,13 +154,13 @@ def _make_crud_parser_factory(
     list_parser = crud_subparsers.add_parser("list", help=f"List all {model} objects")
     list_parser.add_argument(
         "--filter",
-        "-f",
+        "-F",
         type=json.loads,
         help="Filter to apply to the list. The filter should be a JSON string.",
     )
     list_parser.add_argument(
         "--limit",
-        "-l",
+        "-L",
         type=int,
         help="Limit the number of objects to return. The limit should be an integer.",
     )

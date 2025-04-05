@@ -7,7 +7,12 @@ import pandas as pd
 
 from langdon.langdon_logging import logger
 from langdon.models import AndroidApp, Domain, IpAddress
-from langdon.utils import create_if_not_exist, detect_ip_version
+from langdon.utils import (
+    CreateBulkIfNotExistInput,
+    bulk_create_if_not_exist,
+    create_if_not_exist,
+    detect_ip_version,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -76,10 +81,11 @@ def _process_cidrs(raw_dataframe: pd.DataFrame) -> None:
     raw_dataframe.drop(
         raw_dataframe[raw_dataframe["asset_type"] == "CIDR"].index, inplace=True
     )
+    dataframe_length = len(raw_dataframe)
 
-    for ip in discovered_ip_addresses:
-        raw_dataframe.loc[len(raw_dataframe)] = {
-            "identifier": ip,
+    for ip_index, ip_address in enumerate(discovered_ip_addresses):
+        raw_dataframe.loc[dataframe_length + ip_index] = {
+            "identifier": ip_address,
             "asset_type": "IP_ADDRESS",
         }
 
@@ -112,15 +118,19 @@ def _import_apps(raw_dataframe: pd.DataFrame, *, manager: LangdonManager) -> Non
 def _import_ip_addresses(
     raw_dataframe: pd.DataFrame, *, manager: LangdonManager
 ) -> None:
+    ip_addresses_dataset = []
+
     for ip_address in raw_dataframe[raw_dataframe["asset_type"] == "IP_ADDRESS"][
         "identifier"
     ]:
-        was_already_known = create_if_not_exist(
-            IpAddress,
-            version=detect_ip_version(ip_address),
-            address=ip_address,
-            defaults={"was_known": True},
-            manager=manager,
+        kwargs = {"address": ip_address}
+        defaults = {"version": detect_ip_version(ip_address), "was_known": True}
+        ip_addresses_dataset.append(
+            CreateBulkIfNotExistInput(kwargs=kwargs, defaults=defaults)
         )
-        if not was_already_known:
-            logger.info("IP address %s successfully imported", ip_address)
+
+    bulk_create_if_not_exist(
+        IpAddress,
+        ip_addresses_dataset,
+        manager=manager,
+    )
