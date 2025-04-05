@@ -130,7 +130,7 @@ def _print_object_as_json(obj: SqlAlchemyModel) -> None:
     obj_dump = {}
 
     for key, value in dict(vars(obj)).items():
-        if key != "_sa_instance_state":
+        if key == "_sa_instance_state":
             continue
 
         obj_dump[key] = value
