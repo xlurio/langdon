@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from argparse import Namespace
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -87,7 +88,7 @@ def _list_objects(args: CrudOperationNamespace, *, manager: LangdonManager) -> N
     model_cls = _resolve_model(args)
     query = _apply_filters(sql.select(model_cls), args, model_cls)
     result = manager.session.execute(query).scalars().all()
-    _print_results(result, args.module)
+    _print_results_as_jsonl(result, args.module)
 
 
 def _apply_filters(
@@ -103,13 +104,17 @@ def _apply_filters(
     return query
 
 
-def _print_results(result: list[Any], module: str) -> None:
+def _print_results_as_jsonl(result: list[Any], module: str) -> None:
     if not result:
         print(f"No {module} objects found.")
         return
 
+    print("[")
+
     for obj in result:
-        _print_object(obj)
+        _print_object_as_json(obj)
+
+    print("]")
 
 
 def _retrieve_object(args: CrudOperationNamespace, *, manager: LangdonManager) -> None:
@@ -118,15 +123,12 @@ def _retrieve_object(args: CrudOperationNamespace, *, manager: LangdonManager) -
     if not obj:
         raise LangdonException(f"Object not found!")
 
-    _print_object(obj)
+    _print_object_as_json(obj)
 
 
-def _print_object(obj: Any) -> None:
-    for key, value in obj.__dict__.items():
-        if key == "_sa_instance_state":
-            continue
-        print(f"{key}: {value}", end=" | ")
-    print()
+def _print_object_as_json(obj: Any) -> None:
+    obj_dump = {key: value for key, value in vars(obj) if key != "_sa_instance_state"}
+    print(json.dumps(obj_dump, default=str, indent=4))
 
 
 def _update_object(args: CrudOperationNamespace, *, manager: LangdonManager) -> None:
