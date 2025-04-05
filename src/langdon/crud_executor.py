@@ -135,7 +135,7 @@ def _print_object_as_json(obj: SqlAlchemyModel) -> None:
 
         obj_dump[key] = value
 
-    print(json.dumps(obj_dump, default=str, indent=4))
+    print(json.dumps(obj_dump, default=str))
 
 
 def _update_object(args: CrudOperationNamespace, *, manager: LangdonManager) -> None:
