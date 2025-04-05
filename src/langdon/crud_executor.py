@@ -104,6 +104,18 @@ def _apply_filters(
     return query
 
 
+def _dump_object(obj: SqlAlchemyModel) -> dict[str, Any]:
+    obj_dump = {}
+
+    for key, value in dict(vars(obj)).items():
+        if key == "_sa_instance_state":
+            continue
+
+        obj_dump[key] = value
+
+    return obj_dump
+
+
 def _print_results_as_jsonl(result: list[Any], module: str) -> None:
     if not result:
         print(f"No {module} objects found.")
@@ -112,7 +124,8 @@ def _print_results_as_jsonl(result: list[Any], module: str) -> None:
     print("[")
 
     for obj in result:
-        _print_object_as_json(obj)
+        obj_as_json = json.dumps(_dump_object(obj), default=str)
+        print(f"{obj_as_json},")
 
     print("]")
 
@@ -127,15 +140,8 @@ def _retrieve_object(args: CrudOperationNamespace, *, manager: LangdonManager) -
 
 
 def _print_object_as_json(obj: SqlAlchemyModel) -> None:
-    obj_dump = {}
-
-    for key, value in dict(vars(obj)).items():
-        if key == "_sa_instance_state":
-            continue
-
-        obj_dump[key] = value
-
-    print(json.dumps(obj_dump, default=str) + ",")
+    obj_dump = _dump_object(obj)
+    print(json.dumps(obj_dump, default=str))
 
 
 def _update_object(args: CrudOperationNamespace, *, manager: LangdonManager) -> None:
