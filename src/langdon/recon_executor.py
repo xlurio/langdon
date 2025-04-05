@@ -227,7 +227,7 @@ def _discover_domains_with_gobuster(
                 CommandData(
                     command="gobuster",
                     args=f"dns --domain {known_domain_name} --wordlist {dns_wordlist} "
-                    "--quiet --no-color --delay 5",
+                    "--quiet --no-color --delay 5s",
                 ),
                 manager=manager,
             ) as output,
