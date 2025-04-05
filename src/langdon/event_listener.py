@@ -60,6 +60,14 @@ def _handle_event(event: T, *, manager: LangdonManager) -> None:
     EVENT_HANDLERS_MAPPING[type(event)](event, manager=manager)
 
 
+def _handle_event_message_chunk(chunk: Sequence[Mapping[str, Any]]) -> None:
+    for event_data in chunk:
+        try:
+            _handle_event_message(event_data)
+        except Exception as e:
+            pass
+
+
 def _handle_event_message(body: dict[str, Any]):
     from langdon.langdon_manager import LangdonManager
 
@@ -113,8 +121,12 @@ def _process_event_queue(
 
     futures = []
 
-    for event_data in queue:
-        futures.append(executor.submit(_handle_event_message, event_data))
+    CHUNK_SIZE = 8
+
+    for i in range(0, len(queue), CHUNK_SIZE):
+        chunk = queue[i : i + CHUNK_SIZE]
+
+        futures.append(executor.submit(_handle_event_message_chunk, chunk))
 
     CF.wait(futures)
     manager.write_data_file([])
