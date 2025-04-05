@@ -126,8 +126,15 @@ def _retrieve_object(args: CrudOperationNamespace, *, manager: LangdonManager) -
     _print_object_as_json(obj)
 
 
-def _print_object_as_json(obj: Any) -> None:
-    obj_dump = {key: value for key, value in vars(obj) if key != "_sa_instance_state"}
+def _print_object_as_json(obj: SqlAlchemyModel) -> None:
+    obj_dump = {}
+
+    for key, value in dict(vars(obj)).items():
+        if key != "_sa_instance_state":
+            continue
+
+        obj_dump[key] = value
+
     print(json.dumps(obj_dump, default=str, indent=4))
 
 
