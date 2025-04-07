@@ -12,7 +12,6 @@ from langdon.command_executor import (
     shell_command_execution_context,
     suppress_duplicated_recon_process,
 )
-from langdon.exceptions import AlreadyInChildThread
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 from langdon.models import Domain, IpAddress, IpAddressId, IpDomainRel
@@ -28,14 +27,18 @@ def _process_nmap_output(
     root = ET.fromstring(output)
     ports = root.findall(".//port")
 
+    if not ports:
+        return logger.debug("No ports found in Nmap output.")
+
     for port in ports:
         state_data = port.find("state")
+        port_number = int(port.attrib["portid"])
 
         if state_data.attrib["state"] == "closed":
+            logger.debug("Port %d is closed. Skipping.", port_number)
             continue
 
         transport_layer_protocol = port.attrib["protocol"]
-        port_number = int(port.attrib["portid"])
         is_filtered = state_data.attrib["state"] == "filtered"
 
         event_listener.send_event_message(
@@ -88,15 +91,11 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
         logger.debug("Nmap XML:\n%s", file_content)
         _process_nmap_output(file_content, ip_address=ip_address, manager=manager)
 
-    try:
-        task_queue.submit_task(
-            _enumerate_udp_ports,
-            ip_address.id,
-            manager=manager,
-        )
-    except AlreadyInChildThread:
-        logger.debug("Enumerating UDP ports synchronously. Already in child process.")
-        _enumerate_udp_ports(ip_address, manager=manager)
+    task_queue.submit_task(
+        _enumerate_udp_ports,
+        ip_address.id,
+        manager=manager,
+    )
 
 
 def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None:
