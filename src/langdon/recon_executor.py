@@ -77,11 +77,12 @@ def _process_amass_for_domains(
     known_domains_names: set[str], *, manager: LangdonManager
 ) -> None:
     CHUNK_SIZE = 8
+    known_domains_names_list = list(known_domains_names)
 
-    for index in range(0, len(known_domains_names), CHUNK_SIZE):
+    for index in range(0, len(known_domains_names_list), CHUNK_SIZE):
         chunk_start = index
         chunk_end = index + CHUNK_SIZE
-        chunk = list(known_domains_names)[chunk_start:chunk_end]
+        chunk = known_domains_names_list[chunk_start:chunk_end]
         task_queue.submit_task(_process_amass_for_chunk, chunk, manager=manager)
 
 
