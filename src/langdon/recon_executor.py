@@ -439,9 +439,9 @@ def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
     subprocess.run([webanalyze_bin_path, "-update"], check=True)
 
     with task_queue.task_queue_context(), event_listener.event_listener_context():
-        task_queue.submit_task(_download_android_binaries)
-        task_queue.submit_task(_process_known_domains)
-        task_queue.submit_task(_process_known_ip_addresses)
+        task_queue.submit_task(_download_android_binaries, manager=manager)
+        task_queue.submit_task(_process_known_domains, manager=manager)
+        task_queue.submit_task(_process_known_ip_addresses, manager=manager)
         _discover_domains_from_known_ones_passively(manager=manager)
         _discover_domains_actively(manager=manager)
         _discover_content_actively(manager=manager)
