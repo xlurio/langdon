@@ -310,9 +310,9 @@ def _crawl_with_katana(
         shell_command_execution_context(
             CommandData(
                 command="katana",
-                args=f"-list {known_urls_separated_by_comma} -js-crawl -known-files all "
-                "-proxy localhost:9050 -headless -delay 5s -rate-limit-minute 12 -silent "
-                "-no-color",
+                args=f"-list {known_urls_separated_by_comma} -js-crawl "
+                "-known-files all -proxy localhost:9050 -headless -delay 5s "
+                "-rate-limit-minute 12 -silent -no-color",
             ),
             manager=manager,
         ) as output,
