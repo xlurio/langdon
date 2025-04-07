@@ -176,7 +176,7 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     recon_processes_ran_query = sql.select(ReconProcess.name)
     recon_processes_ran = set(manager.session.scalars(recon_processes_ran_query).all())
 
-    assert "amass" in recon_processes_ran_query, (
+    assert "amass" in recon_processes_ran, (
         "Amass should be run before discovering domains actively."
     )
     assert "subfinder" in recon_processes_ran, (
