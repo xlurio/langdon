@@ -22,7 +22,7 @@ from langdon.events import DomainDiscovered, IpAddressDiscovered, WebDirectoryDi
 from langdon.exceptions import LangdonProgrammingError
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
-from langdon.models import AndroidApp, Domain, IpAddress, WebDirectory
+from langdon.models import AndroidApp, Domain, IpAddress, ReconProcess, WebDirectory
 from langdon.output import OutputColor
 
 if TYPE_CHECKING:
@@ -173,6 +173,19 @@ def _process_assetfinder_for_domains(known_domains_names: list[str]) -> None:
 
 
 def _discover_domains_actively(*, manager: LangdonManager) -> None:
+    recon_processes_ran_query = sql.select(ReconProcess.name)
+    recon_processes_ran = set(manager.session.scalars(recon_processes_ran_query).all())
+
+    assert "amass" in recon_processes_ran_query, (
+        "Amass should be run before discovering domains actively."
+    )
+    assert "subfinder" in recon_processes_ran, (
+        "Subfinder should be run before discovering domains actively."
+    )
+    assert "assetfinder" in recon_processes_ran, (
+        "Assetfinder should be run before discovering domains actively."
+    )
+
     known_domain_names = _get_known_domain_names(manager)
 
     if not known_domain_names:
@@ -415,7 +428,9 @@ def _process_known_ip_addresses() -> None:
         known_ip_addresses_query = sql.select(IpAddress.address).where(
             IpAddress.was_known == True
         )
-        known_ip_addresses = set(manager.session.scalars(known_ip_addresses_query).all())
+        known_ip_addresses = set(
+            manager.session.scalars(known_ip_addresses_query).all()
+        )
 
         if not known_ip_addresses:
             return logger.debug("No known IP addresses to process")
