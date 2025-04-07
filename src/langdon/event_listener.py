@@ -65,7 +65,12 @@ def _handle_event_message_chunk(chunk: Sequence[Mapping[str, Any]]) -> None:
         try:
             _handle_event_message(event_data)
         except Exception as e:
-            pass
+            logger.debug(
+                "Error while handling event message: %s. Event data: %s",
+                e,
+                event_data,
+                exc_info=True,
+            )
 
 
 def _handle_event_message(body: dict[str, Any]):
