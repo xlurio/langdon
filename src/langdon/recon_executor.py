@@ -20,6 +20,7 @@ from langdon.command_executor import (
 )
 from langdon.events import DomainDiscovered, IpAddressDiscovered, WebDirectoryDiscovered
 from langdon.exceptions import LangdonProgrammingError
+from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 from langdon.models import AndroidApp, Domain, IpAddress, WebDirectory
 from langdon.output import OutputColor
@@ -28,25 +29,35 @@ if TYPE_CHECKING:
     from langdon.langdon_argparser import LangdonNamespace
 
 
-def _download_android_binaries(*, manager: LangdonManager) -> None:
-    android_bin_dir = manager.config["downloaded_apks_dir"]
-    android_apps_query = sql.select(AndroidApp.android_app_id)
-    for android_app_id in manager.session.scalars(android_apps_query):
-        with (
-            suppress_duplicated_recon_process(),
-            shell_command_execution_context(
-                CommandData(
-                    command="apkeep", args=f"--app {android_app_id} {android_bin_dir}"
+def _download_android_binaries() -> None:
+    with LangdonManager() as manager:
+        android_bin_dir = manager.config["downloaded_apks_dir"]
+        android_apps_query = sql.select(AndroidApp.android_app_id)
+        app_ids = set(manager.session.scalars(android_apps_query).all())
+
+        if not app_ids:
+            return logger.debug("No Android apps to download")
+
+        for android_app_id in app_ids:
+            with (
+                suppress_duplicated_recon_process(),
+                shell_command_execution_context(
+                    CommandData(
+                        command="apkeep",
+                        args=f"--app {android_app_id} {android_bin_dir}",
+                    ),
+                    manager=manager,
                 ),
-                manager=manager,
-            ),
-        ):
-            ...
+            ):
+                ...
 
 
 def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> None:
     known_domains_query = sql.select(Domain.name).where(Domain.was_known == True)
     known_domains_names = set(manager.session.scalars(known_domains_query))
+
+    if not known_domains_names:
+        return logger.debug("No known domains to passively enumerate from")
 
     with tempfile.NamedTemporaryFile("w+") as temp_file:
         temp_file.write("\n".join(known_domains_names))
@@ -163,6 +174,10 @@ def _process_assetfinder_for_domains(known_domains_names: list[str]) -> None:
 
 def _discover_domains_actively(*, manager: LangdonManager) -> None:
     known_domain_names = _get_known_domain_names(manager)
+
+    if not known_domain_names:
+        return logger.debug("No known domains to actively enumerate from")
+
     generated_domains = _generate_domains(known_domain_names, manager)
     _resolve_domains(generated_domains, manager)
     _discover_domains_with_gobuster(known_domain_names, manager)
@@ -170,7 +185,7 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
 
 def _get_known_domain_names(manager: LangdonManager) -> list[str]:
     known_domains_query = sql.select(Domain.name)
-    return set(manager.session.scalars(known_domains_query))
+    return set(manager.session.scalars(known_domains_query).all())
 
 
 def _generate_domains(
@@ -292,6 +307,10 @@ def _discover_content_actively(*, manager: LangdonManager) -> None:
         Domain.name + sql.literal("/") + sql.func.ltrim(WebDirectory.path, "/")
     ).join(WebDirectory.domain)
     known_urls = set(manager.session.scalars(known_urls_query))
+
+    if not known_urls:
+        return logger.debug("No known URLs to actively enumerate content from")
+
     known_urls_separated_by_comma = ",".join(known_urls)
     extensions_separated_by_comma = ",".join(WEB_FILE_EXTENSIONS)
     user_agent = manager.config["user_agent"]
@@ -377,22 +396,34 @@ def _discover_content_with_gobuster(
                     )
 
 
-def _process_known_domains(*, manager: LangdonManager) -> None:
-    known_domains_query = sql.select(Domain.name).where(Domain.was_known == True)
-    for domain_name in manager.session.scalars(known_domains_query):
-        event_listener.send_event_message(
-            DomainDiscovered(name=domain_name), manager=manager
-        )
+def _process_known_domains() -> None:
+    with LangdonManager() as manager:
+        known_domains_query = sql.select(Domain.name).where(Domain.was_known == True)
+        known_domain_names = set(manager.session.scalars(known_domains_query).all())
+
+        if not known_domain_names:
+            return logger.debug("No known domains to process")
+
+        for domain_name in known_domain_names:
+            event_listener.send_event_message(
+                DomainDiscovered(name=domain_name), manager=manager
+            )
 
 
-def _process_known_ip_addresses(*, manager: LangdonManager) -> None:
-    known_ip_addresses_query = sql.select(IpAddress.address).where(
-        IpAddress.was_known == True
-    )
-    for ip_address in manager.session.scalars(known_ip_addresses_query):
-        event_listener.send_event_message(
-            IpAddressDiscovered(address=ip_address), manager=manager
+def _process_known_ip_addresses() -> None:
+    with LangdonManager() as manager:
+        known_ip_addresses_query = sql.select(IpAddress.address).where(
+            IpAddress.was_known == True
         )
+        known_ip_addresses = set(manager.session.scalars(known_ip_addresses_query).all())
+
+        if not known_ip_addresses:
+            return logger.debug("No known IP addresses to process")
+
+        for ip_address in manager.session.scalars(known_ip_addresses_query):
+            event_listener.send_event_message(
+                IpAddressDiscovered(address=ip_address), manager=manager
+            )
 
 
 def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
@@ -408,9 +439,9 @@ def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
     subprocess.run([webanalyze_bin_path, "-update"], check=True)
 
     with task_queue.task_queue_context(), event_listener.event_listener_context():
-        _download_android_binaries(manager=manager)
-        _process_known_domains(manager=manager)
-        _process_known_ip_addresses(manager=manager)
+        task_queue.submit_task(_download_android_binaries)
+        task_queue.submit_task(_process_known_domains)
+        task_queue.submit_task(_process_known_ip_addresses)
         _discover_domains_from_known_ones_passively(manager=manager)
         _discover_domains_actively(manager=manager)
         _discover_content_actively(manager=manager)
