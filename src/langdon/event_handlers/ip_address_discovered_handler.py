@@ -55,7 +55,7 @@ def _enumerate_udp_ports(ip_address_id: IpAddressId) -> None:
         ip_address = manager.session.execute(ip_address_query).scalar_one()
 
         with (
-            NamedTemporaryFile("w+b", suffix=".xml") as temp_file,
+            NamedTemporaryFile("w+", suffix=".xml") as temp_file,
             suppress_duplicated_recon_process(),
             shell_command_execution_context(
                 CommandData(
@@ -73,7 +73,7 @@ def _enumerate_udp_ports(ip_address_id: IpAddressId) -> None:
 
 def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
     with (
-        NamedTemporaryFile("w+b", suffix=".xml") as temp_file,
+        NamedTemporaryFile("w+", suffix=".xml") as temp_file,
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
             CommandData(
