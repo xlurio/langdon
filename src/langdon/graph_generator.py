@@ -276,9 +276,13 @@ def add_web_dir_tech_relationships(
         .join(WebDirTechRel.technology)
     )
     for web_dir_tech_rel in manager.session.scalars(web_dir_tech_rel_query):
+        color = _get_node_color(
+            _make_web_directory_node_name(web_dir_tech_rel.directory)
+        )
         dot.edge(
             _make_web_directory_node_name(web_dir_tech_rel.directory),
             f"{web_dir_tech_rel.technology.name} {web_dir_tech_rel.technology.version or ''}",
+            color=color,
         )
 
 
