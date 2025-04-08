@@ -170,7 +170,7 @@ def wait_for_all_tasks_to_finish(
         with TaskQueueFileManager(manager) as file_manager:
             tasks = file_manager.read_data_file()
 
-        is_task_queue_empty = not tasks
+        is_task_queue_empty = all(task["was_executed"] for task in tasks)
 
         if end_time and time.time() > end_time:
             logger.warning(

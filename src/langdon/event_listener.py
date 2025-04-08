@@ -204,7 +204,7 @@ def wait_for_all_events_to_be_handled(
         with EventListenerQueueManager(manager=manager) as event_queue_manager:
             queue = event_queue_manager.read_data_file()
 
-        is_event_queue_empty = not queue
+        is_event_queue_empty = all(event["was_handled"] for event in queue)
 
         if end_time and time.time() > end_time:
             logger.warning(
