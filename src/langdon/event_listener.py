@@ -146,7 +146,9 @@ def _process_event_queue(*, manager: LangdonManager, executor: CF.Executor) -> b
     for queue_index in range(0, len(queue), CHUNK_SIZE):
         futures.append(
             executor.submit(
-                _handle_event_message_chunk, queue_index, queue_index + CHUNK_SIZE
+                _handle_event_message_chunk,
+                queue_index,
+                min(queue_index + CHUNK_SIZE, len(queue)),
             )
         )
 
