@@ -93,7 +93,6 @@ def _should_skip_event(event_data: dict[str, Any]) -> bool:
 def _process_event_data(curr_index: int, event_data: dict[str, Any], manager: LangdonManager) -> None:
     try:
         _handle_event_message(event_data)
-        _mark_event_as_handled(curr_index, event_data, manager)
     except Exception as e:
         logger.debug(
             "Error while handling event message: %s. Event data: %s",
@@ -101,6 +100,9 @@ def _process_event_data(curr_index: int, event_data: dict[str, Any], manager: La
             event_data,
             exc_info=True,
         )
+    finally:
+        _mark_event_as_handled(curr_index, event_data, manager)
+
 
 
 def _mark_event_as_handled(curr_index: int, event_data: dict[str, Any], manager: LangdonManager) -> None:

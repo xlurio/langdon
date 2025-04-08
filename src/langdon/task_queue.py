@@ -107,13 +107,18 @@ def _process_task(
     try:
         func(*args, **kwargs)
 
-        with LangdonManager() as manager, TaskQueueFileManager(manager) as file_manager:
-            tasks = file_manager.read_data_file()
-            tasks[task_id]["was_executed"] = True
-            file_manager.write_data_file(tasks)
-
     except Exception as e:
         logger.debug("Error executing task %s: %s", task_id, e, exc_info=True)
+
+    finally:
+        with LangdonManager() as manager, TaskQueueFileManager(manager) as file_manager:
+            tasks = list(file_manager.read_data_file())
+            try:
+                tasks[task_id]["was_executed"] = True
+            except IndexError:
+                tasks.append({"func": func.__name__, "was_executed": True})
+
+            file_manager.write_data_file(tasks)
 
 
 def process_tasks(*, manager: LangdonManager, executor: CF.ThreadPoolExecutor) -> None:
