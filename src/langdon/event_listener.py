@@ -136,7 +136,7 @@ def _process_event_queue(*, manager: LangdonManager, executor: CF.Executor) -> b
     with EventListenerQueueManager(manager=manager) as queue_manager:
         queue = queue_manager.read_data_file()
 
-    if not queue:
+    if all(event["was_handled"] for event in queue):
         return
 
     futures = []

@@ -127,6 +127,9 @@ def process_tasks(*, manager: LangdonManager, executor: CF.ThreadPoolExecutor) -
     with TaskQueueFileManager(manager) as file_manager:
         tasks = file_manager.read_data_file()
 
+    if all(task["was_executed"] for task in tasks):
+        return
+
     futures = []
 
     for task_id, raw_task in enumerate(tasks):
