@@ -66,14 +66,16 @@ def _build_cleaned_url(
     web_directory: WebDirectory, cleaned_hostname: str, cleaned_directory_path: str
 ) -> str:
     schema = "https" if web_directory.uses_ssl else "http"
-    return urllib.parse.urlunparse((
-        schema,
-        cleaned_hostname,
-        cleaned_directory_path,
-        "",
-        "",
-        "",
-    ))
+    return urllib.parse.urlunparse(
+        (
+            schema,
+            cleaned_hostname,
+            cleaned_directory_path,
+            "",
+            "",
+            "",
+        )
+    )
 
 
 def _analyze_with_whatweb(
@@ -120,15 +122,12 @@ def _run_webanalyze(
 
         reader = csv.DictReader(temp_file)
         for row in reader:
-            _dispatch_event(
-                "TechnologyDiscovered",
-                {
-                    "name": row["App"],
-                    "version": row["Version"].strip()
-                    if row["Version"].strip()
-                    else None,
-                    "directory": web_directory,
-                },
+            event_listener.send_event_message(
+                manager.get_event_by_name("TechnologyDiscovered")(
+                    name=row["App"],
+                    version=row["Version"].strip() if row["Version"].strip() else None,
+                    directory=web_directory,
+                ),
                 manager=manager,
             )
 
