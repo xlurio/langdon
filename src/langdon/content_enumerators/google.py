@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import shutil
 import tempfile
 import time
 from typing import TYPE_CHECKING, cast
@@ -9,7 +10,7 @@ import pydub
 import requests
 import speech_recognition as sr
 from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox import options, webdriver
+from selenium.webdriver.firefox import options, service, webdriver
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support import wait
 
@@ -47,7 +48,9 @@ def _make_webdriver(*, manager: LangdonManager) -> webdriver.WebDriver:
         "general.useragent.override", manager.config["user_agent"]
     )
 
-    return webdriver.WebDriver(options=wd_options)
+    wd_service = service.Service(shutil.which("geckodriver"))
+
+    return webdriver.WebDriver(options=wd_options, service=wd_service)
 
 
 def _solve_captcha(driver: webdriver.WebDriver, *, manager: LangdonManager) -> None:
@@ -62,10 +65,12 @@ def _solve_captcha(driver: webdriver.WebDriver, *, manager: LangdonManager) -> N
         ).click()
         driver.switch_to.default_content()
         challenge_iframe = wait.WebDriverWait(driver, 60).until(
-            ec.element_to_be_clickable((
-                By.XPATH,
-                "//iframe[@title='recaptcha challenge expires in two minutes']",
-            ))
+            ec.element_to_be_clickable(
+                (
+                    By.XPATH,
+                    "//iframe[@title='recaptcha challenge expires in two minutes']",
+                )
+            )
         )
         driver.switch_to.frame(challenge_iframe)
         driver.find_element(By.ID, "recaptcha-audio-button").click()
