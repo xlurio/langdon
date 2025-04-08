@@ -20,12 +20,14 @@ from langdon.langdon_manager import LangdonManager
 class TaskDict(TypedDict):
     func: str
     args: tuple
+    was_executed: bool
     kwargs: dict
 
 
 class Task(pydantic.BaseModel):
     func: str
     args: tuple[Any, ...]
+    was_executed: bool = False
     kwargs: dict[str, Any]
 
     @pydantic.field_validator("func")
@@ -56,16 +58,17 @@ def submit_task(
         **kwargs (dict): Keyword arguments to be passed to the function.
     """
 
-    file_manager = TaskQueueFileManager(manager)
     new_task = Task(
         func=f"{func.__module__}.{func.__name__}",
         args=args,
         kwargs=kwargs,
     )
-    current_tasks = list(file_manager.read_data_file()) + [
-        new_task.model_dump(mode="json")
-    ]
-    file_manager.write_data_file(current_tasks)
+
+    with TaskQueueFileManager(manager) as file_manager:
+        current_tasks = list(file_manager.read_data_file()) + [
+            new_task.model_dump(mode="json")
+        ]
+        file_manager.write_data_file(current_tasks)
 
 
 def start_task_executor() -> None:
@@ -75,19 +78,39 @@ def start_task_executor() -> None:
     max_workers = max((os.cpu_count() or 1) // 2, 1)
 
     with CF.ThreadPoolExecutor(max_workers) as executor, LangdonManager() as manager:
-        file_manager = TaskQueueFileManager(manager)
         while True:
             try:
-                process_tasks(file_manager, executor)
+                process_tasks(executor=executor, manager=manager)
             except KeyboardInterrupt:
                 break
 
             time.sleep(1)
 
 
-def process_tasks(
-    file_manager: TaskQueueFileManager, executor: CF.ThreadPoolExecutor
+def _process_task(
+    func: Callable[..., None], *args: tuple, task_id, **kwargs: dict
 ) -> None:
+    """
+    Process a single task.
+
+    Args:
+        func (Callable[..., None]): The function to be executed.
+        *args (tuple): Positional arguments to be passed to the function.
+        **kwargs (dict): Keyword arguments to be passed to the function.
+    """
+    try:
+        func(*args, **kwargs)
+
+        with LangdonManager() as manager, TaskQueueFileManager(manager) as file_manager:
+            tasks = file_manager.read_data_file()
+            tasks[task_id]["was_executed"] = True
+            file_manager.write_data_file(tasks)
+
+    except Exception as e:
+        logger.debug("Error executing task %s: %s", task_id, e, exc_info=True)
+
+
+def process_tasks(*, manager: LangdonManager, executor: CF.ThreadPoolExecutor) -> None:
     """
     Process tasks from the task queue.
 
@@ -95,22 +118,29 @@ def process_tasks(
         file_manager (TaskQueueFileManager): The file manager for the task queue.
         executor (CF.ThreadPoolExecutor): The thread pool executor.
     """
-    tasks = file_manager.read_data_file()
+    with TaskQueueFileManager(manager) as file_manager:
+        tasks = file_manager.read_data_file()
 
-    if tasks:
-        futures = []
+    futures = []
 
-        for raw_task in tasks:
-            task = Task.model_validate(raw_task)
+    for task_id, raw_task in enumerate(tasks):
+        if raw_task["was_executed"]:
+            continue
 
-            module_name, func_name = task.func.rsplit(".", 1)
-            module = __import__(module_name, fromlist=[func_name])
-            func = getattr(module, func_name)
+        task = Task.model_validate(raw_task)
 
-            futures.append(executor.submit(func, *task.args, **task.kwargs))
+        module_name, func_name = task.func.rsplit(".", 1)
+        module = __import__(module_name, fromlist=[func_name])
+        func = getattr(module, func_name)
 
-        CF.wait(futures)
-        file_manager.write_data_file([])
+        futures.append(
+            executor.submit(
+                _process_task, func, *task.args, task_id=task_id, **task.kwargs
+            )
+        )
+
+    CF.wait(futures)
+    file_manager.write_data_file([])
 
 
 def wait_for_all_tasks_to_finish(
@@ -126,13 +156,14 @@ def wait_for_all_tasks_to_finish(
     logger.debug("Waiting for all tasks to finish")
     end_time = (time.time() + timeout) if timeout else None
 
-    file_manager = TaskQueueFileManager(manager)
     is_task_queue_empty = False
 
     while not is_task_queue_empty:
         time.sleep(random.randint(1, 3))
 
-        tasks = file_manager.read_data_file()
+        with TaskQueueFileManager(manager) as file_manager:
+            tasks = file_manager.read_data_file()
+
         is_task_queue_empty = not tasks
 
         if end_time and time.time() > end_time:

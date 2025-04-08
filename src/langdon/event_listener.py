@@ -11,12 +11,12 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 from langdon.abc import DataFileManagerABC
 from langdon.langdon_logging import logger
+from langdon.langdon_manager import LangdonManager
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from langdon.events import Event
-    from langdon.langdon_manager import LangdonManager
 
 T = TypeVar("T", bound="Event")
 
@@ -60,17 +60,39 @@ def _handle_event(event: T, *, manager: LangdonManager) -> None:
     EVENT_HANDLERS_MAPPING[type(event)](event, manager=manager)
 
 
-def _handle_event_message_chunk(chunk: Sequence[Mapping[str, Any]]) -> None:
-    for event_data in chunk:
-        try:
-            _handle_event_message(event_data)
-        except Exception as e:
-            logger.debug(
-                "Error while handling event message: %s. Event data: %s",
-                e,
-                event_data,
-                exc_info=True,
-            )
+class EventListenerQueueManager(DataFileManagerABC[Sequence[Mapping[str, Any]]]):
+    FILE_CONFIG_KEY = "event_queue_file"
+
+    def get_default_file_initial_value(self) -> Sequence[Mapping[str, Any]]:
+        return []
+
+
+def _handle_event_message_chunk(start_index: int, end_index: int) -> None:
+    with LangdonManager() as manager:
+        with EventListenerQueueManager(manager=manager) as queue_manager:
+            queue = queue_manager.read_data_file()
+
+        for curr_index in range(start_index, end_index):
+            try:
+                event_data = queue[curr_index]
+
+                if event_data["was_handled"]:
+                    continue
+
+                _handle_event_message(event_data)
+
+                with EventListenerQueueManager(manager=manager) as queue_manager:
+                    queue = queue_manager.read_data_file()
+                    queue[curr_index]["was_handled"] = True
+                    queue_manager.write_data_file(queue)
+
+            except Exception as e:
+                logger.debug(
+                    "Error while handling event message: %s. Event data: %s",
+                    e,
+                    event_data,
+                    exc_info=True,
+                )
 
 
 def _handle_event_message(body: dict[str, Any]):
@@ -109,17 +131,9 @@ def _handle_event_message(body: dict[str, Any]):
         _handle_event(event, manager=manager)
 
 
-class EventListenerQueueManager(DataFileManagerABC[Sequence[Mapping[str, Any]]]):
-    FILE_CONFIG_KEY = "event_queue_file"
-
-    def get_default_file_initial_value(self) -> Sequence[Mapping[str, Any]]:
-        return []
-
-
-def _process_event_queue(
-    *, manager: EventListenerQueueManager, executor: CF.Executor
-) -> bool:
-    queue = manager.read_data_file()
+def _process_event_queue(*, manager: LangdonManager, executor: CF.Executor) -> bool:
+    with EventListenerQueueManager(manager=manager) as queue_manager:
+        queue = queue_manager.read_data_file()
 
     if not queue:
         return
@@ -128,13 +142,14 @@ def _process_event_queue(
 
     CHUNK_SIZE = 8
 
-    for i in range(0, len(queue), CHUNK_SIZE):
-        chunk = queue[i : i + CHUNK_SIZE]
-
-        futures.append(executor.submit(_handle_event_message_chunk, chunk))
+    for queue_index in range(0, len(queue), CHUNK_SIZE):
+        futures.append(
+            executor.submit(
+                _handle_event_message_chunk, queue_index, queue_index + CHUNK_SIZE
+            )
+        )
 
     CF.wait(futures)
-    manager.write_data_file([])
 
 
 def start_event_listener() -> None:
@@ -143,11 +158,9 @@ def start_event_listener() -> None:
     max_workers = max((os.cpu_count() or 1) // 2, 1)
 
     with CF.ThreadPoolExecutor(max_workers) as executor, LangdonManager() as manager:
-        event_queue_manager = EventListenerQueueManager(manager=manager)
-
         while True:
             try:
-                _process_event_queue(manager=event_queue_manager, executor=executor)
+                _process_event_queue(manager=manager, executor=executor)
 
             except KeyboardInterrupt:
                 break
@@ -174,14 +187,14 @@ def wait_for_all_events_to_be_handled(
     """Wait for all events to be handled."""
     logger.debug("Waiting for all events to be handled")
     end_time = (time.time() + timeout) if timeout else None
-
-    event_queue_manager = EventListenerQueueManager(manager=manager)
     is_event_queue_empty = False
 
     while not is_event_queue_empty:
         time.sleep(random.randint(1, 3))
 
-        queue = event_queue_manager.read_data_file()
+        with EventListenerQueueManager(manager=manager) as event_queue_manager:
+            queue = event_queue_manager.read_data_file()
+
         is_event_queue_empty = not queue
 
         if end_time and time.time() > end_time:
@@ -195,14 +208,14 @@ def send_event_message(event: T, *, manager: LangdonManager) -> None:
     """Send an event message to the event listener queue."""
     from langdon.events import Event
 
-    event_manager = EventListenerQueueManager(manager=manager)
-
     if not isinstance(event, Event):
         raise ValueError("Event must be an instance of Event")
 
     event_data = event.model_dump(mode="json")
     event_data["type"] = type(event).__name__
+    event_data["was_handled"] = False
 
-    queue_data = list(event_manager.read_data_file())
-    queue_data.append(event_data)
-    event_manager.write_data_file(queue_data)
+    with EventListenerQueueManager(manager=manager) as event_manager:
+        queue_data = list(event_manager.read_data_file())
+        queue_data.append(event_data)
+        event_manager.write_data_file(queue_data)

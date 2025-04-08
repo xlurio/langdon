@@ -4,7 +4,7 @@ import multiprocessing
 import pathlib
 import threading
 from abc import abstractmethod
-from typing import Generic, TypeVar
+from typing import Generic, Self, TypeVar
 
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
@@ -28,18 +28,25 @@ class DataFileManagerABC(abc.ABC, Generic[T]):
     def get_default_file_initial_value(self) -> T:
         raise NotImplementedError
 
+    def __enter__(self) -> "Self":
+        self.__process_queue_lock.__enter__()
+        self.__thread_queue_lock.__enter__()
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.__thread_queue_lock.__exit__(exc_type, exc_val, exc_tb)
+        self.__process_queue_lock.__exit__(exc_type, exc_val, exc_tb)
+
     def read_data_file(self) -> T:
-        with self.__process_queue_lock, self.__thread_queue_lock:
-            try:
-                return json.loads(self.__data_file_path.read_text())
+        try:
+            return json.loads(self.__data_file_path.read_text())
 
-            except json.JSONDecodeError:
-                logger.warning(
-                    "The %s file is empty or corrupted", self.__data_file_path
-                )
+        except json.JSONDecodeError:
+            logger.warning("The %s file is empty or corrupted", self.__data_file_path)
 
-            except FileNotFoundError:
-                logger.debug("File %s not found", self.__data_file_path)
+        except FileNotFoundError:
+            logger.debug("File %s not found", self.__data_file_path)
 
         return self.get_default_file_initial_value()
 
@@ -52,8 +59,7 @@ class DataFileManagerABC(abc.ABC, Generic[T]):
                 f"Data must be iterable or mapping, got {type(data).__name__}"
             )
 
-        with self.__process_queue_lock, self.__thread_queue_lock:
-            self.__data_file_path.write_text(json.dumps(data))
+        self.__data_file_path.write_text(json.dumps(data))
 
     @property
     def langdon_manager(self) -> LangdonManager:

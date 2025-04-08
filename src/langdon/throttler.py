@@ -21,21 +21,24 @@ class CacheFileManager(DataFileManagerABC[Mapping[str, float]]):
         return {}
 
 
-def _get_cache(key: str, *, manager: CacheFileManager) -> Mapping[str, float]:
-    return manager.read_data_file()[key]
+def _get_cache(key: str, *, manager: LangdonManager) -> Mapping[str, float]:
+    with CacheFileManager(manager=manager) as cache_manager:
+        return cache_manager.read_data_file()[key]
 
 
-def _set_cache(key: str, value: float, *, manager: CacheFileManager) -> None:
-    cache = manager.read_data_file()
-    cache[key] = value
-    manager.write_data_file(cache)
+def _set_cache(key: str, value: float, *, manager: LangdonManager) -> None:
+    with CacheFileManager(manager=manager) as cache_manager:
+        cache = cache_manager.read_data_file()
+        cache[key] = value
+        cache_manager.write_data_file(cache)
 
 
 def wait_for_slot(queue: str, *, manager: LangdonManager) -> None:
-    cache_manager = CacheFileManager(manager=manager)
+    with CacheFileManager(manager=manager) as cache_manager:
+        was_queue_created = queue in cache_manager.read_data_file()
 
-    if queue not in cache_manager.read_data_file():
-        return _set_cache(queue, time.time(), manager=cache_manager)
+    if not was_queue_created:
+        return _set_cache(queue, time.time(), manager=manager)
 
     expected_time_between_requests = random.randint(
         MIN_TIME_BETWEEN_REQUESTS, MAX_TIME_BETWEEN_REQUESTS
