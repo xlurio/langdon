@@ -106,9 +106,19 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
 
 def add_domains(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     logger.info("Adding domains to the graph.")
-    ip_address_domain_rel_query = sql.select(IpDomainRel.domain_id)
+    port_query = sql.select(UsedPort.ip_address_id)
+    ip_address_domain_rel_query = sql.select(IpDomainRel.domain_id).where(
+        IpDomainRel.id.in_(port_query)
+    )
+
+    directories_query = sql.select(WebDirectory.domain_id).where(
+        WebDirectory.domain_id != None
+    )
+
     domains_query = sql.select(Domain).where(
-        Domain.id.in_(ip_address_domain_rel_query)
+        sql.or_(
+            Domain.id.in_(ip_address_domain_rel_query), Domain.id.in_(directories_query)
+        )
     )
     for domain in manager.session.scalars(domains_query):
         color = _get_node_color(domain.name)
@@ -117,7 +127,8 @@ def add_domains(dot: graphviz.Digraph, manager: LangdonManager) -> None:
 
 def add_ip_addresses(dot: graphviz.Digraph, manager: LangdonManager) -> None:
     logger.info("Adding IP addresses to the graph.")
-    ip_address_query = sql.select(IpAddress)
+    port_query = sql.select(UsedPort.ip_address_id)
+    ip_address_query = sql.select(IpAddress).where(IpAddress.id.in_(port_query))
     for ip_address in manager.session.scalars(ip_address_query):
         color = _get_node_color(ip_address.address)
         dot.node(
@@ -224,9 +235,15 @@ def add_used_ports(dot: graphviz.Digraph, manager: LangdonManager) -> None:
         .join(UsedPort.ip_address)
     )
     for used_port in manager.session.scalars(used_ports_query):
-        dot.node(str(used_port.port), shape="diamond")
+        dot.node(
+            f"{used_port.port}/{used_port.transport_layer_protocol}", shape="diamond"
+        )
         color = _get_node_color(used_port.ip_address.address)
-        dot.edge(used_port.ip_address.address, str(used_port.port), color=color)
+        dot.edge(
+            used_port.ip_address.address,
+            f"{used_port.port}/{used_port.transport_layer_protocol}",
+            color=color,
+        )
 
 
 def add_technologies(dot: graphviz.Digraph, manager: LangdonManager) -> None:
