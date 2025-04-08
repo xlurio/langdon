@@ -45,9 +45,9 @@ def wait_for_slot(queue: str, *, manager: LangdonManager) -> None:
     )
 
     while (
-        time.time() - _get_cache(queue, manager=cache_manager)
+        time.time() - _get_cache(queue, manager=manager)
         < expected_time_between_requests
     ):
         time.sleep(0.1)
 
-    _set_cache(queue, time.time(), manager=cache_manager)
+    _set_cache(queue, time.time(), manager=manager)
