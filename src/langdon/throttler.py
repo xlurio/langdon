@@ -34,20 +34,18 @@ def _set_cache(key: str, value: float, *, manager: LangdonManager) -> None:
 
 
 def wait_for_slot(queue: str, *, manager: LangdonManager) -> None:
-    with CacheFileManager(manager=manager) as cache_manager:
-        was_queue_created = queue in cache_manager.read_data_file()
-
-    if not was_queue_created:
-        return _set_cache(queue, time.time(), manager=manager)
-
     expected_time_between_requests = random.randint(
         MIN_TIME_BETWEEN_REQUESTS, MAX_TIME_BETWEEN_REQUESTS
     )
 
-    while (
-        time.time() - _get_cache(queue, manager=manager)
-        < expected_time_between_requests
-    ):
-        time.sleep(0.1)
+    try:
+        while (
+            time.time() - _get_cache(queue, manager=manager)
+            < expected_time_between_requests
+        ):
+            time.sleep(0.1)
 
-    _set_cache(queue, time.time(), manager=manager)
+        _set_cache(queue, time.time(), manager=manager)
+
+    except KeyError:
+        return _set_cache(queue, time.time(), manager=manager)

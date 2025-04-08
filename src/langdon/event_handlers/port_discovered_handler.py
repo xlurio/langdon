@@ -138,6 +138,8 @@ def _enumerate_web_directories(
                 manager=manager,
             )
 
+    # TODO discover directories from getJS
+
 
 def _process_http_port(
     event: PortDiscovered, ip_address_obj: IpAddress, *, manager: LangdonManager
