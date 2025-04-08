@@ -4,6 +4,7 @@ import concurrent.futures as CF
 import contextlib
 import multiprocessing
 import os
+import pathlib
 import random
 import time
 from collections.abc import Mapping, Sequence
@@ -11,12 +12,12 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 from langdon.abc import DataFileManagerABC
 from langdon.langdon_logging import logger
-from langdon.langdon_manager import LangdonManager
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from langdon.events import Event
+    from langdon.langdon_manager import LangdonManager
 
 T = TypeVar("T", bound="Event")
 
@@ -68,6 +69,8 @@ class EventListenerQueueManager(DataFileManagerABC[Sequence[Mapping[str, Any]]])
 
 
 def _handle_event_message_chunk(start_index: int, end_index: int) -> None:
+    from langdon.langdon_manager import LangdonManager
+
     with LangdonManager() as manager:
         with EventListenerQueueManager(manager=manager) as queue_manager:
             queue = queue_manager.read_data_file()
@@ -155,17 +158,23 @@ def _process_event_queue(*, manager: LangdonManager, executor: CF.Executor) -> b
 def start_event_listener() -> None:
     from langdon.langdon_manager import LangdonManager
 
-    max_workers = max((os.cpu_count() or 1) // 2, 1)
+    with LangdonManager() as manager:
+        try:
+            max_workers = max((os.cpu_count() or 1) // 2, 1)
 
-    with CF.ThreadPoolExecutor(max_workers) as executor, LangdonManager() as manager:
-        while True:
-            try:
-                _process_event_queue(manager=manager, executor=executor)
+            with CF.ThreadPoolExecutor(max_workers) as executor:
+                while True:
+                    try:
+                        _process_event_queue(manager=manager, executor=executor)
 
-            except KeyboardInterrupt:
-                break
+                    except KeyboardInterrupt:
+                        break
 
-            time.sleep(1)
+                    time.sleep(1)
+
+        finally:
+            event_queue_file = manager.config["event_queue_file"]
+            pathlib.Path(event_queue_file).unlink(missing_ok=True)
 
 
 @contextlib.contextmanager

@@ -4,6 +4,7 @@ import concurrent.futures as CF
 import contextlib
 import multiprocessing
 import os
+import pathlib
 import random
 import re
 import time
@@ -77,14 +78,19 @@ def start_task_executor() -> None:
     """
     max_workers = max((os.cpu_count() or 1) // 2, 1)
 
-    with CF.ThreadPoolExecutor(max_workers) as executor, LangdonManager() as manager:
-        while True:
-            try:
-                process_tasks(executor=executor, manager=manager)
-            except KeyboardInterrupt:
-                break
+    with LangdonManager() as manager:
+        try:
+            with CF.ThreadPoolExecutor(max_workers) as executor:
+                while True:
+                    try:
+                        process_tasks(executor=executor, manager=manager)
+                    except KeyboardInterrupt:
+                        break
 
-            time.sleep(1)
+                    time.sleep(1)
+        finally:
+            task_queue_file = manager.config["task_queue_file"]
+            pathlib.Path(task_queue_file).unlink(missing_ok=True)
 
 
 def _process_task(
