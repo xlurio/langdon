@@ -126,7 +126,7 @@ def _run_webanalyze(
                 manager.get_event_by_name("TechnologyDiscovered")(
                     name=row["App"],
                     version=row["Version"].strip() if row["Version"].strip() else None,
-                    directory=web_directory,
+                    directory_id=web_directory.id,
                 ),
                 manager=manager,
             )

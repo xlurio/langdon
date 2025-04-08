@@ -33,7 +33,7 @@ HTTP_PORTS = (80, 443)
 
 
 def _dispatch_web_directory_discovered(
-    event: PortDiscovered,
+    port_obj: UsedPort,
     urls: list[str],
     domain_name: Domain | None,
     ip_address: IpAddress | None,
@@ -61,14 +61,14 @@ def _dispatch_web_directory_discovered(
                 path=cleaned_path,
                 domain_id=new_domain.id,
                 ip_address_id=ip_address.id,
-                uses_ssl=event.port == 443,
+                uses_ssl=port_obj.port == 443,
             ),
             manager=manager,
         )
 
 
 def _enumerate_web_directories(
-    event: PortDiscovered,
+    port_obj: UsedPort,
     *,
     domain: Domain | None = None,
     ip_address: IpAddress | None = None,
@@ -88,7 +88,7 @@ def _enumerate_web_directories(
         ) as output,
     ):
         _dispatch_web_directory_discovered(
-            event, output.splitlines(), domain, ip_address, manager=manager
+            port_obj, output.splitlines(), domain, ip_address, manager=manager
         )
 
     with (
@@ -115,7 +115,7 @@ def _enumerate_web_directories(
             CommandData(
                 command="wafw00f",
                 args=f"-f csv -o {temp_file.name} -p socks5://localhost:9050 --no-colors "
-                f"{'https' if event.port == 443 else 'http'}://{cleaned_host_name}",
+                f"{'https' if port_obj.port == 443 else 'http'}://{cleaned_host_name}",
             ),
             manager=manager,
         ) as output,
@@ -133,7 +133,7 @@ def _enumerate_web_directories(
                     name=row["firewall"],
                     version=None,
                     domain_id=domain.id if domain else None,
-                    ip_address_id=event.ip_address_id,
+                    port_id=port_obj.id,
                 ),
                 manager=manager,
             )
@@ -142,7 +142,7 @@ def _enumerate_web_directories(
 
 
 def _process_http_port(
-    event: PortDiscovered, ip_address_obj: IpAddress, *, manager: LangdonManager
+    port_obj: UsedPort, ip_address_obj: IpAddress, *, manager: LangdonManager
 ) -> None:
     def process_domains(domains: Sequence[Domain]):
         for domain in domains:
@@ -151,33 +151,33 @@ def _process_http_port(
                     path="/",
                     domain_id=domain.id,
                     manager=manager,
-                    uses_ssl=event.port == 443,
+                    uses_ssl=port_obj.port == 443,
                 ),
                 manager=manager,
             )
-            _enumerate_web_directories(event, domain=domain, manager=manager)
+            _enumerate_web_directories(port_obj, domain=domain, manager=manager)
 
     def process_ip_address():
         event_listener.send_event_message(
             manager.get_event_by_name("WebDirectoryDiscovered")(
                 path="/",
-                ip_address_id=event.ip_address_id,
+                ip_address_id=port_obj.ip_address_id,
                 manager=manager,
                 uses_ssl=False,
             ),
             manager=manager,
         )
-        _enumerate_web_directories(event, ip_address=ip_address_obj, manager=manager)
+        _enumerate_web_directories(port_obj, ip_address=ip_address_obj, manager=manager)
 
     domain_ids_subquery = sql.select(IpDomainRel.domain_id).where(
-        IpDomainRel.ip_id == event.ip_address_id
+        IpDomainRel.ip_id == port_obj.ip_address_id
     )
     query = sql.select(Domain).where(Domain.id.in_(domain_ids_subquery))
     domains = manager.session.scalars(query).all()
 
     if domains:
         process_domains(domains)
-    elif event.port == 80:
+    elif port_obj.port == 80:
         process_ip_address()
     else:
         logger.error(
@@ -226,16 +226,14 @@ def _process_other_ports(
 
 
 def _process_found_port(
-    port_obj: UsedPort,
-    ip_address_obj: IpAddress,
-    event: PortDiscovered,
-    *,
-    manager: LangdonManager,
+    port_obj: UsedPort, ip_address_obj: IpAddress, *, manager: LangdonManager
 ) -> None:
-    is_http = (event.port in HTTP_PORTS) and (event.transport_layer_protocol == "tcp")
+    is_http = (port_obj.port in HTTP_PORTS) and (
+        port_obj.transport_layer_protocol == "tcp"
+    )
 
     if is_http:
-        return _process_http_port(event, ip_address_obj, manager=manager)
+        return _process_http_port(port_obj, ip_address_obj, manager=manager)
 
     return _process_other_ports(port_obj, ip_address_obj, manager=manager)
 
