@@ -263,7 +263,7 @@ def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
     port_obj = manager.session.execute(query).scalar_one()
 
     if not port_obj.is_filtered:
-        _process_found_port(port_obj, ip_address_obj, event, manager=manager)
+        _process_found_port(port_obj, ip_address_obj, manager=manager)
     else:
         logger.debug(
             "Port %s on IP %s is filtered. Skipping further processing.",
