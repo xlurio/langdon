@@ -4,6 +4,7 @@ import multiprocessing
 import pathlib
 import threading
 from abc import abstractmethod
+from types import TracebackType
 from typing import Generic, Self, TypeVar
 
 from langdon.langdon_logging import logger
@@ -34,9 +35,17 @@ class DataFileManagerABC(abc.ABC, Generic[T]):
 
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException],
+        exc_val: BaseException,
+        exc_tb: TracebackType,
+    ) -> None:
         self.__thread_queue_lock.__exit__(exc_type, exc_val, exc_tb)
         self.__process_queue_lock.__exit__(exc_type, exc_val, exc_tb)
+
+        if exc_val is not None:
+            raise exc_val.with_traceback(exc_tb)
 
     def read_data_file(self) -> T:
         try:

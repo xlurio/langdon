@@ -72,13 +72,11 @@ def _handle_event_message_chunk(start_index: int, end_index: int) -> None:
     from langdon.langdon_manager import LangdonManager
 
     with LangdonManager() as manager:
-        with EventListenerQueueManager(manager=manager) as queue_manager:
-            queue = queue_manager.read_data_file()
-
         for curr_index in range(start_index, end_index):
-            try:
-                event_data = queue[curr_index]
+            with EventListenerQueueManager(manager=manager) as queue_manager:
+                event_data = queue_manager.read_data_file()[curr_index]
 
+            try:
                 if event_data["was_handled"]:
                     continue
 

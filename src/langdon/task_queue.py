@@ -146,7 +146,6 @@ def process_tasks(*, manager: LangdonManager, executor: CF.ThreadPoolExecutor) -
         )
 
     CF.wait(futures)
-    file_manager.write_data_file([])
 
 
 def wait_for_all_tasks_to_finish(
