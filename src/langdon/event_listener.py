@@ -73,27 +73,44 @@ def _handle_event_message_chunk(start_index: int, end_index: int) -> None:
 
     with LangdonManager() as manager:
         for curr_index in range(start_index, end_index):
-            with EventListenerQueueManager(manager=manager) as queue_manager:
-                event_data = queue_manager.read_data_file()[curr_index]
+            event_data = _get_event_data(curr_index, manager)
 
-            try:
-                if event_data["was_handled"]:
-                    continue
+            if _should_skip_event(event_data):
+                continue
 
-                _handle_event_message(event_data)
+            _process_event_data(curr_index, event_data, manager)
 
-                with EventListenerQueueManager(manager=manager) as queue_manager:
-                    queue = queue_manager.read_data_file()
-                    queue[curr_index]["was_handled"] = True
-                    queue_manager.write_data_file(queue)
 
-            except Exception as e:
-                logger.debug(
-                    "Error while handling event message: %s. Event data: %s",
-                    e,
-                    event_data,
-                    exc_info=True,
-                )
+def _get_event_data(curr_index: int, manager: LangdonManager) -> dict[str, Any]:
+    with EventListenerQueueManager(manager=manager) as queue_manager:
+        return queue_manager.read_data_file()[curr_index]
+
+
+def _should_skip_event(event_data: dict[str, Any]) -> bool:
+    return event_data.get("was_handled", False)
+
+
+def _process_event_data(curr_index: int, event_data: dict[str, Any], manager: LangdonManager) -> None:
+    try:
+        _handle_event_message(event_data)
+        _mark_event_as_handled(curr_index, event_data, manager)
+    except Exception as e:
+        logger.debug(
+            "Error while handling event message: %s. Event data: %s",
+            e,
+            event_data,
+            exc_info=True,
+        )
+
+
+def _mark_event_as_handled(curr_index: int, event_data: dict[str, Any], manager: LangdonManager) -> None:
+    with EventListenerQueueManager(manager=manager) as queue_manager:
+        queue = list(queue_manager.read_data_file())
+        try:
+            queue[curr_index]["was_handled"] = True
+        except IndexError:
+            queue.append({"was_handled": True, **event_data})
+        queue_manager.write_data_file(queue)
 
 
 def _handle_event_message(body: dict[str, Any]):
