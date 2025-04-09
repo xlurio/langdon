@@ -338,13 +338,15 @@ def _discover_content_actively(*, manager: LangdonManager) -> None:
 def _crawl_with_katana(
     known_urls_separated_by_comma: str, manager: LangdonManager
 ) -> None:
+    proxy = f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}"
+
     with (
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
             CommandData(
                 command="katana",
                 args=f"-list {known_urls_separated_by_comma} -js-crawl "
-                "-known-files all -proxy localhost:9050 -headless -delay 5s "
+                f"-known-files all -proxy {proxy} -headless -delay 5s "
                 "-rate-limit-minute 12 -silent -no-color",
             ),
             manager=manager,
@@ -385,6 +387,17 @@ def _discover_content_with_gobuster(
         known_domain_name = parsed_url.netloc.split(":")[0]
         known_domain_query = sql.select(Domain).filter(Domain.name == known_domain_name)
         known_domain = manager.session.execute(known_domain_query).scalar_one()
+        proxy = urllib.parse.urlunparse(
+            (
+                "socks5",
+                f"{manager.config['socks_proxy_host']}:"
+                f"{manager.config['socks_proxy_port']}",
+                "",
+                "",
+                "",
+                "",
+            )
+        )
 
         with (
             suppress_duplicated_recon_process(),
@@ -395,7 +408,7 @@ def _discover_content_with_gobuster(
                     f"--wordlist {content_wordlist} "
                     f"--extensions {extensions_separated_by_comma} --hide-length"
                     f"--no-status --retry --timeout 30 --useragent '{user_agent}'"
-                    "--proxy socks5://localhost:9050",
+                    f"--proxy {proxy}",
                 ),
                 manager=manager,
             ) as output,

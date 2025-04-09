@@ -42,8 +42,8 @@ def _make_webdriver(*, manager: LangdonManager) -> webdriver.WebDriver:
         wd_options.set_preference("profile", firefox_profile)
 
     wd_options.set_preference("network.proxy.type", 1)
-    wd_options.set_preference("network.proxy.socks", "localhost")
-    wd_options.set_preference("network.proxy.socks_port", 9050)
+    wd_options.set_preference("network.proxy.socks", manager.config["socks_proxy_host"])
+    wd_options.set_preference("network.proxy.socks_port", manager.config["socks_proxy_port"])
     wd_options.set_preference(
         "general.useragent.override", manager.config["user_agent"]
     )

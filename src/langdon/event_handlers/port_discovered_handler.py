@@ -75,6 +75,17 @@ def _enumerate_web_directories(
     manager: LangdonManager,
 ) -> None:
     cleaned_host_name = domain.name if domain else ip_address.address
+    proxy = urllib.parse.urlunparse(
+        (
+            "socks5",
+            f"{manager.config['socks_proxy_host']}:"
+            f"{manager.config['socks_proxy_port']}",
+            "",
+            "",
+            "",
+            "",
+        )
+    )
 
     with (
         suppress_duplicated_recon_process(),
@@ -82,7 +93,7 @@ def _enumerate_web_directories(
             CommandData(
                 command="gau",
                 args="--blacklist png,jpg,gif,ttf,woff --fp "
-                f"--proxy socks5://localhost:9050 {cleaned_host_name}",
+                f"--proxy {proxy} {cleaned_host_name}",
             ),
             manager=manager,
         ) as output,
@@ -114,7 +125,7 @@ def _enumerate_web_directories(
         shell_command_execution_context(
             CommandData(
                 command="wafw00f",
-                args=f"-f csv -o {temp_file.name} -p socks5://localhost:9050 --no-colors "
+                args=f"-f csv -o {temp_file.name} -p {proxy} --no-colors "
                 f"{'https' if port_obj.port == 443 else 'http'}://{cleaned_host_name}",
             ),
             manager=manager,
