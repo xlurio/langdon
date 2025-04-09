@@ -32,10 +32,15 @@ apt update -y ; apt install -y tor firefox build-essential libssl-dev \
 curl -fsSL https://pyenv.run | bash
 echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
 echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-echo 'eval "$(pyenv init - bash)"' >> ~/.bashrc
+
 echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
 echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.profile
+
+source ~/.bashrc
+
+echo 'eval "$(pyenv init - bash)"' >> ~/.bashrc
 echo 'eval "$(pyenv init - bash)"' >> ~/.profile
+
 source ~/.bashrc
 
 # Python
