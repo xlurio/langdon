@@ -154,7 +154,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-poetry run -P "$HOME/langdon" langdon -- importcsv "$1"
+poetry run -P "'$HOME'/langdon" langdon -- importcsv "$1"
 
 supervisord -c /etc/supervisord.conf
 ' > "$1/start.sh"
