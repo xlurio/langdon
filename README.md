@@ -3,6 +3,13 @@
 CLI for network application reconnaissance
 
 
+## Automatic installation
+
+```bash
+curl -fsSL https://github.com/xlurio/langdon/raw/refs/heads/main/scripts/install.sh | bash
+```
+
+
 ## Dependencies
 
 - amass ~= v4.2.0
