@@ -10,14 +10,14 @@ CLI for network application reconnaissance
 - assetfinder ~= v0.1.1
 - dnsgen ~= v1.0.4
 - exploitdb ~= 20241126
-- ffmpeg ~= 7.1.1-1
+- ffmpeg ~= 7.1.1
 - gau ~= 2.2.4
 - go ~= 1.24.1
 - gobuster ~= v3.6.0
 - gowitness ~= 3.0.5
-- host ~= 9.20.4-4
+- host ~= 9.20.4
 - katana ~= v1.1.2
-- massdns ~= v1.1.0-9
+- massdns ~= v1.1.0
 - Mozilla Firefox ~= 128.7.0
 - Nmap ~= 7.95
 - Python >= 3.12
