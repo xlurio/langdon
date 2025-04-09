@@ -1,7 +1,7 @@
 # /bin/bash
 set -ex
 
-if [[ $# -ne 0 ]]; then
+if [[ $# -ne 1 ]]; then
     echo "Usage: $0 <recon_project_directory>"
     exit 1
 fi
