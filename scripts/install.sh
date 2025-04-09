@@ -36,17 +36,17 @@ echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bas
 echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
 echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.profile
 
-source ~/.bashrc
+. ~/.bashrc
 
 echo 'eval "$(pyenv init - bash)"' >> ~/.bashrc
 echo 'eval "$(pyenv init - bash)"' >> ~/.profile
 
-source ~/.bashrc
+. ~/.bashrc
 
 # Python
 pyenv install 3
 pyenv global 3
-source ~/.bashrc
+. ~/.bashrc
 
 # Python packages
 pip install --upgrade pip
@@ -59,7 +59,7 @@ gem install bundler
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.profile
-source ~/.bashrc
+. ~/.bashrc
 
 # Rust packages
 cargo install apkeep
@@ -69,7 +69,7 @@ wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
 rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
 echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.bashrc
 echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.profile
-source ~/.bashrc
+. ~/.bashrc
 
 # Go Packages
 go install github.com/tomnomnom/assetfinder@latest
@@ -81,13 +81,13 @@ go install github.com/owasp-amass/amass/v4/...@master
 CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
 echo 'export PATH="$PATH:'$HOME'/go/bin"' >> ~/.bashrc
 echo 'export PATH="$PATH:'$HOME'/go/bin"' >> ~/.profile
-source ~/.bashrc
+. ~/.bashrc
 
 # ExploitDB
 git clone https://gitlab.com/exploit-database/exploitdb.git
 echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.profile
-source ~/.bashrc
+. ~/.bashrc
 
 # MassDNS
 git clone https://github.com/blechschmidt/massdns.git
@@ -98,7 +98,7 @@ chmod +x massdns
 echo 'export PATH="$PATH:$HOME/massdns/bin"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/massdns/bin"' >> ~/.profile
 cd "$HOME"
-source ~/.bashrc
+. ~/.bashrc
 
 # Webanalyze
 mkdir webanalyze
@@ -109,7 +109,7 @@ chmod +x webanalyze
 echo 'export PATH="$PATH:$HOME/webanalyze"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/webanalyze"' >> ~/.profile
 cd "$HOME"
-source ~/.bashrc
+. ~/.bashrc
 
 # WhatWeb
 git clone https://github.com/urbanadventurer/WhatWeb.git
@@ -120,7 +120,7 @@ chmod +x whatweb
 echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.profile
 cd "$HOME"
-source ~/.bashrc
+. ~/.bashrc
 
 # Wordlists
 git clone https://github.com/danielmiessler/SecLists.git
@@ -136,7 +136,7 @@ poetry install -C "$HOME/langdon"
 
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
-source ~/.bashrc
+. ~/.bashrc
 
 # Create recoinassaince directory
 mkdir -p "$1"
@@ -162,7 +162,7 @@ chmod 754 "$1/start.sh"
 
 # Supervisor
 pip install --user supervisor
-source ~/.bashrc
+. ~/.bashrc
 echo_supervisord_conf > /etc/supervisord.conf
 echo '
 [program:langdon-run]
