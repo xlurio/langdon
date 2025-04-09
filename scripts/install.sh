@@ -136,7 +136,7 @@ poetry install -C "$HOME/langdon"
 
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
-exec $SHELL
+source ~/.bashrc
 
 # Create recoinassaince directory
 mkdir -p "$1"
