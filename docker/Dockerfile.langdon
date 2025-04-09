@@ -1,0 +1,94 @@
+FROM ubuntu:24.04
+
+# Set non-interactive mode for APT
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt update -y && apt install -y \
+    wget gpg curl git build-essential libssl-dev zlib1g-dev libbz2-dev \
+    libreadline-dev libsqlite3-dev libncursesw5-dev xz-utils tk-dev \
+    libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev dnsutils nmap \
+    ffmpeg graphviz ruby-full libyaml-dev
+
+# Add Mozilla APT repository
+RUN install -d -m 0755 /etc/apt/keyrings && \
+    wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- | \
+    tee /etc/apt/keyrings/packages.mozilla.org.asc > /dev/null && \
+    echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" | \
+    tee /etc/apt/sources.list.d/mozilla.list > /dev/null && \
+    echo 'Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000' | \
+    tee /etc/apt/preferences.d/mozilla && \
+    apt update -y && apt install -y tor firefox
+
+# Install PyEnv and Python
+RUN curl -fsSL https://pyenv.run | bash && \
+    echo 'export PYENV_ROOT="/root/.pyenv"' >> /root/.bashrc && \
+    echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> /root/.bashrc
+    
+RUN /root/.pyenv/bin/pyenv install 3 && \
+    /root/.pyenv/bin/pyenv global 3 && \
+    /root/.pyenv/shims/pip install --upgrade pip && \
+    /root/.pyenv/shims/python -m pip install --user dnsgen wafw00f
+
+# Install Ruby Bundler
+RUN gem install bundler
+
+# Install Rust and Rust packages
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    echo 'export PATH="/root/.cargo/bin:$PATH"' >> /root/.bashrc
+    
+RUN /root/.cargo/bin/cargo install apkeep
+
+# Install Go and Go packages
+RUN wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz && \
+    echo 'export PATH="$PATH:/usr/local/go/bin"' >> /root/.bashrc
+    
+RUN /usr/local/go/bin/go install github.com/tomnomnom/assetfinder@latest && \
+    /usr/local/go/bin/go install github.com/lc/gau/v2/cmd/gau@latest && \
+    /usr/local/go/bin/go install github.com/OJ/gobuster/v3@latest && \
+    /usr/local/go/bin/go install github.com/sensepost/gowitness@latest && \
+    /usr/local/go/bin/go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
+    /usr/local/go/bin/go install github.com/owasp-amass/amass/v4/...@master && \
+    CGO_ENABLED=1 /usr/local/go/bin/go install github.com/projectdiscovery/katana/cmd/katana@latest && \
+    echo 'export PATH="$PATH:/root/go/bin"' >> /root/.bashrc
+
+# Clone and build MassDNS
+RUN git clone https://github.com/blechschmidt/massdns.git && \
+    cd massdns && make && chmod +x bin/massdns && \
+    echo 'export PATH="$PATH:/root/massdns/bin"' >> /root/.bashrc
+
+# Install Webanalyze
+RUN mkdir /root/webanalyze && cd /root/webanalyze && \
+    wget https://github.com/rverton/webanalyze/releases/download/v0.4.1/webanalyze_Linux_x86_64.tar.gz && \
+    tar -xvf webanalyze_Linux_x86_64.tar.gz && chmod +x webanalyze && \
+    echo 'export PATH="$PATH:/root/webanalyze"' >> /root/.bashrc
+
+# Clone and setup WhatWeb
+RUN git clone https://github.com/urbanadventurer/WhatWeb.git && \
+    cd WhatWeb && bundle update && bundle install && chmod +x whatweb && \
+    echo 'export PATH="$PATH:/root/WhatWeb"' >> /root/.bashrc
+
+# Download wordlists
+RUN git clone https://github.com/danielmiessler/SecLists.git && \
+    mkdir /root/jhaddix && cd /root/jhaddix && \
+    wget https://gist.github.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
+
+# Clone Langdon and install dependencies
+COPY . /root/langdon
+RUN /root/.pyenv/shims/pip install --user poetry && \
+    /root/.local/bin/poetry install -C /root/langdon && \
+    echo 'export PATH="/root/.local/bin:$PATH"' >> /root/.bashrc
+
+# Generate subfinder config
+RUN /root/go/bin/subfinder -ls
+
+# Set working directory
+WORKDIR /recon
+RUN /root/.local/bin/poetry run --project="/root/langdon" langdon -- \
+    --loglevel DEBUG init --resolvers_file "/root/massdns/lists/resolvers.txt" \
+    --dns_wordlist "/root/jhaddix/all.txt" \
+    --content_wordlist "/root/SecLists/Discovery/Web-Content/raft-large-directories-lowercase.txt"
+
+# Default command
+CMD ["/bin/bash"]

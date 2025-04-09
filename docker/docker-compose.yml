@@ -1,0 +1,27 @@
+services:
+  langdon:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.langdon
+      tags: 
+        - langdon_i
+    container_name: langdon_cli_c
+    stdin_open: true
+    tty: true
+    networks:
+      - langdon_network
+    depends_on:
+      - tor
+
+  tor:
+    build:
+      dockerfile: Dockerfile.tor
+      tags: 
+        - tor_i
+    container_name: langdon_tor_c
+    networks:
+      - langdon_network
+
+networks:
+  langdon_network:
+    driver: bridge

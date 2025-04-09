@@ -5,7 +5,7 @@ description = "Tool for target applications reconnaissance"
 authors = [
     {name = "Lucas Calegario"}
 ]
-license = {text = "The GNU General Public License v3.0"}
+license = "LICENSE"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
