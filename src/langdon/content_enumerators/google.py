@@ -109,7 +109,7 @@ def _solve_captcha(driver: webdriver.WebDriver, *, manager: LangdonManager) -> N
         raise LangdonException("Could not solve the captcha")
 
 
-def enumerate_directories(domain: str, *, manager: LangdonManager) -> Iterator[str]:
+def enumerate_directories_with_google(domain: str, *, manager: LangdonManager) -> Iterator[str]:
     with _make_webdriver(manager=manager) as driver:
         _initialize_search(driver, domain, manager=manager)
         while True:
