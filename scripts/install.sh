@@ -36,12 +36,12 @@ echo 'eval "$(pyenv init - bash)"' >> ~/.bashrc
 echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
 echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.profile
 echo 'eval "$(pyenv init - bash)"' >> ~/.profile
-exec "$SHELL"
+source ~/.bashrc
 
 # Python
 pyenv install 3
 pyenv global 3
-exec "$SHELL"
+source ~/.bashrc
 
 # Python packages
 pip install --upgrade pip
@@ -54,7 +54,7 @@ gem install bundler
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.profile
-exec "$SHELL"
+source ~/.bashrc
 
 # Rust packages
 cargo install apkeep
@@ -64,7 +64,7 @@ wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
 rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
 echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.bashrc
 echo 'export PATH="$PATH:/usr/local/go/bin"' >> ~/.profile
-exec "$SHELL"
+source ~/.bashrc
 
 # Go Packages
 go install github.com/tomnomnom/assetfinder@latest
@@ -76,13 +76,13 @@ go install github.com/owasp-amass/amass/v4/...@master
 CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
 echo 'export PATH="$PATH:'$HOME'/go/bin"' >> ~/.bashrc
 echo 'export PATH="$PATH:'$HOME'/go/bin"' >> ~/.profile
-exec "$SHELL"
+source ~/.bashrc
 
 # ExploitDB
 git clone https://gitlab.com/exploit-database/exploitdb.git
 echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.profile
-exec "$SHELL"
+source ~/.bashrc
 
 # MassDNS
 git clone https://github.com/blechschmidt/massdns.git
@@ -93,7 +93,7 @@ chmod +x massdns
 echo 'export PATH="$PATH:$HOME/massdns/bin"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/massdns/bin"' >> ~/.profile
 cd "$HOME"
-exec "$SHELL"
+source ~/.bashrc
 
 # Webanalyze
 mkdir webanalyze
@@ -104,7 +104,7 @@ chmod +x webanalyze
 echo 'export PATH="$PATH:$HOME/webanalyze"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/webanalyze"' >> ~/.profile
 cd "$HOME"
-exec "$SHELL"
+source ~/.bashrc
 
 # WhatWeb
 git clone https://github.com/urbanadventurer/WhatWeb.git
@@ -115,7 +115,7 @@ chmod +x whatweb
 echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/WhatWeb"' >> ~/.profile
 cd "$HOME"
-exec "$SHELL"
+source ~/.bashrc
 
 # Wordlists
 git clone https://github.com/danielmiessler/SecLists.git
@@ -157,7 +157,7 @@ chmod 754 "$1/start.sh"
 
 # Supervisor
 pip install --user supervisor
-exec "$SHELL"
+source ~/.bashrc
 echo_supervisord_conf > /etc/supervisord.conf
 echo '
 [program:langdon-run]
