@@ -73,10 +73,7 @@ def _enumerate_web_directories(
 
             event_listener.send_event_message(
                 manager.get_event_by_name("TechnologyDiscovered")(
-                    name=row["firewall"],
-                    version=None,
-                    domain_id=domain.id if domain else None,
-                    port_id=port_obj.id,
+                    name=row["firewall"], version=None, port_id=port_obj.id
                 ),
                 manager=manager,
             )
