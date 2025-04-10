@@ -17,6 +17,8 @@ from langdon.abc import DataFileManagerABC
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 
+TaskId = int
+
 
 class TaskDict(TypedDict):
     func: str
@@ -94,7 +96,7 @@ def start_task_executor() -> None:
 
 
 def _process_task(
-    func: Callable[..., None], *args: tuple, task_id, **kwargs: dict
+    func: Callable[..., None], *args: tuple, task_id: TaskId, **kwargs: dict
 ) -> None:
     """
     Process a single task.

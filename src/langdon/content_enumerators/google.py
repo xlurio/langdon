@@ -29,7 +29,11 @@ THROTTLING_QUEUE = "throttler_google"
 class GoogleRecognizerType(sr.Recognizer):
     @abc.abstractmethod
     def recognize_google(
-        self, audio_data, key=None, language="en-US", show_all=False
+        self,
+        audio_data: sr.AudioData,
+        key: str = None,
+        language: str = "en-US",
+        show_all: bool = False,
     ) -> str:
         raise NotImplementedError
 
@@ -43,7 +47,9 @@ def _make_webdriver(*, manager: LangdonManager) -> webdriver.WebDriver:
 
     wd_options.set_preference("network.proxy.type", 1)
     wd_options.set_preference("network.proxy.socks", manager.config["socks_proxy_host"])
-    wd_options.set_preference("network.proxy.socks_port", manager.config["socks_proxy_port"])
+    wd_options.set_preference(
+        "network.proxy.socks_port", manager.config["socks_proxy_port"]
+    )
     wd_options.set_preference(
         "general.useragent.override", manager.config["user_agent"]
     )
@@ -65,12 +71,10 @@ def _solve_captcha(driver: webdriver.WebDriver, *, manager: LangdonManager) -> N
         ).click()
         driver.switch_to.default_content()
         challenge_iframe = wait.WebDriverWait(driver, 60).until(
-            ec.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    "//iframe[@title='recaptcha challenge expires in two minutes']",
-                )
-            )
+            ec.element_to_be_clickable((
+                By.XPATH,
+                "//iframe[@title='recaptcha challenge expires in two minutes']",
+            ))
         )
         driver.switch_to.frame(challenge_iframe)
         driver.find_element(By.ID, "recaptcha-audio-button").click()
@@ -109,7 +113,9 @@ def _solve_captcha(driver: webdriver.WebDriver, *, manager: LangdonManager) -> N
         raise LangdonException("Could not solve the captcha")
 
 
-def enumerate_directories_with_google(domain: str, *, manager: LangdonManager) -> Iterator[str]:
+def enumerate_directories_with_google(
+    domain: str, *, manager: LangdonManager
+) -> Iterator[str]:
     with _make_webdriver(manager=manager) as driver:
         _initialize_search(driver, domain, manager=manager)
         while True:

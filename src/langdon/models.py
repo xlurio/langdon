@@ -80,9 +80,7 @@ IpDomainRelId = int
 class IpDomainRel(SqlAlchemyModel):
     __tablename__ = "langdon_ipdomainrels"
     __table_args__ = (
-        sqlalchemy.UniqueConstraint(
-            "ip_id", "domain_id", name="_ip_domain_uc"
-        ),
+        sqlalchemy.UniqueConstraint("ip_id", "domain_id", name="_ip_domain_uc"),
     )
 
     id: orm.Mapped[IpDomainRelId] = orm.mapped_column(primary_key=True)

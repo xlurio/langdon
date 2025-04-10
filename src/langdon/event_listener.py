@@ -90,7 +90,9 @@ def _should_skip_event(event_data: dict[str, Any]) -> bool:
     return event_data.get("was_handled", False)
 
 
-def _process_event_data(curr_index: int, event_data: dict[str, Any], manager: LangdonManager) -> None:
+def _process_event_data(
+    curr_index: int, event_data: dict[str, Any], manager: LangdonManager
+) -> None:
     try:
         _handle_event_message(event_data)
     except Exception as e:
@@ -104,8 +106,9 @@ def _process_event_data(curr_index: int, event_data: dict[str, Any], manager: La
         _mark_event_as_handled(curr_index, event_data, manager)
 
 
-
-def _mark_event_as_handled(curr_index: int, event_data: dict[str, Any], manager: LangdonManager) -> None:
+def _mark_event_as_handled(
+    curr_index: int, event_data: dict[str, Any], manager: LangdonManager
+) -> None:
     with EventListenerQueueManager(manager=manager) as queue_manager:
         queue = list(queue_manager.read_data_file())
         try:

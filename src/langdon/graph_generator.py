@@ -90,16 +90,14 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
         directory.domain.name if directory.domain else directory.ip_address.address
     )
     cleaned_directory_path = directory.path.lstrip("/")
-    parsed_url = urllib.parse.urlunparse(
-        (
-            schema,
-            cleaned_hostname,
-            cleaned_directory_path,
-            "",
-            "",
-            "",
-        )
-    )
+    parsed_url = urllib.parse.urlunparse((
+        schema,
+        cleaned_hostname,
+        cleaned_directory_path,
+        "",
+        "",
+        "",
+    ))
 
     return re.sub(r"[^a-zA-Z0-9]", "_", parsed_url)
 

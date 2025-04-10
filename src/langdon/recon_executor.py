@@ -96,34 +96,31 @@ def _get_directories_query(chunk: set[int]):
     )
 
 
-def _build_url(directory) -> str:
-    return urllib.parse.urlunparse(
-        (
-            "https" if directory.uses_ssl else "http",
-            directory.domain.name if directory.domain else directory.ip_address.address,
-            directory.path,
-            "",
-            "",
-            "",
-        )
-    )
+def _build_url(directory: WebDirectory) -> str:
+    return urllib.parse.urlunparse((
+        "https" if directory.uses_ssl else "http",
+        directory.domain.name if directory.domain else directory.ip_address.address,
+        directory.path,
+        "",
+        "",
+        "",
+    ))
 
 
 def _build_proxy(manager: LangdonManager) -> str:
-    return urllib.parse.urlunparse(
-        (
-            "socks5",
-            f"{manager.config['socks_proxy_host']}:"
-            f"{manager.config['socks_proxy_port']}",
-            "",
-            "",
-            "",
-            "",
-        )
-    )
+    return urllib.parse.urlunparse((
+        "socks5",
+        f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}",
+        "",
+        "",
+        "",
+        "",
+    ))
 
 
-def _process_gau_output(curr_url: str, proxy: str, directory, manager: LangdonManager):
+def _process_gau_output(
+    curr_url: str, proxy: str, directory: WebDirectory, manager: LangdonManager
+):
     with (
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
@@ -139,7 +136,9 @@ def _process_gau_output(curr_url: str, proxy: str, directory, manager: LangdonMa
             _process_found_url(found_url, directory, manager)
 
 
-def _process_found_url(found_url: str, directory, manager: LangdonManager):
+def _process_found_url(
+    found_url: str, directory: WebDirectory, manager: LangdonManager
+):
     found_url_parsed = urllib.parse.urlparse(found_url)
 
     if not found_url_parsed.netloc:
@@ -596,17 +595,15 @@ def _discover_content_with_gobuster(
         known_domain_name = parsed_url.netloc.split(":")[0]
         known_domain_query = sql.select(Domain).filter(Domain.name == known_domain_name)
         known_domain = manager.session.execute(known_domain_query).scalar_one()
-        proxy = urllib.parse.urlunparse(
-            (
-                "socks5",
-                f"{manager.config['socks_proxy_host']}:"
-                f"{manager.config['socks_proxy_port']}",
-                "",
-                "",
-                "",
-                "",
-            )
-        )
+        proxy = urllib.parse.urlunparse((
+            "socks5",
+            f"{manager.config['socks_proxy_host']}:"
+            f"{manager.config['socks_proxy_port']}",
+            "",
+            "",
+            "",
+            "",
+        ))
 
         with (
             suppress_duplicated_recon_process(),

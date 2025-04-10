@@ -57,7 +57,9 @@ def _enumerate_udp_ports(ip_address_id: IpAddressId) -> None:
         ip_address = manager.session.execute(ip_address_query).scalar_one()
 
         with (
-            utils.langdon_tempfile(f"langdon_nmap_udp_{ip_address.address}", suffix=".xml") as temp_file,
+            utils.langdon_tempfile(
+                f"langdon_nmap_udp_{ip_address.address}", suffix=".xml"
+            ) as temp_file,
             suppress_duplicated_recon_process(),
             shell_command_execution_context(
                 CommandData(

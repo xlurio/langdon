@@ -38,7 +38,7 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff.lint]
-select = ["F401", "G004", "I", "PLR0912", "PLR0917", "SIM117", "TC"]
+select = ["ANN001", "F401", "G004", "I", "PLR0912", "PLR0917", "SIM117", "TC"]
 fixable = ["ALL"]
 unfixable = []
 

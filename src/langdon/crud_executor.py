@@ -92,7 +92,7 @@ def _list_objects(args: CrudOperationNamespace, *, manager: LangdonManager) -> N
 
 
 def _apply_filters(
-    query: sql.Select, args: CrudOperationNamespace, model_cls
+    query: sql.Select, args: CrudOperationNamespace, model_cls: type[SqlAlchemyModel]
 ) -> sql.Select:
     if args.filter:
         for key, value in args.filter.items():

@@ -36,17 +36,14 @@ def _enumerate_web_directories(
     manager: LangdonManager,
 ) -> None:
     cleaned_host_name = domain.name if domain else ip_address.address
-    proxy = urllib.parse.urlunparse(
-        (
-            "socks5",
-            f"{manager.config['socks_proxy_host']}:"
-            f"{manager.config['socks_proxy_port']}",
-            "",
-            "",
-            "",
-            "",
-        )
-    )
+    proxy = urllib.parse.urlunparse((
+        "socks5",
+        f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}",
+        "",
+        "",
+        "",
+        "",
+    ))
 
     throttler.wait_for_slot(f"throttle_{cleaned_host_name}", manager=manager)
 
