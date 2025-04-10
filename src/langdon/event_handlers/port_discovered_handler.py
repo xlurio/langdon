@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import csv
 import re
-import tempfile
 import urllib.parse
 import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import sql
 
-from langdon import event_listener, throttler
+from langdon import event_listener, throttler, utils
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -52,7 +51,9 @@ def _enumerate_web_directories(
     throttler.wait_for_slot(f"throttle_{cleaned_host_name}", manager=manager)
 
     with (
-        tempfile.NamedTemporaryFile("w+", suffix=".csv") as temp_file,
+        utils.langdon_tempfile(
+            f"langdon_wafw00f_{cleaned_host_name}", suffix=".csv"
+        ) as temp_file,
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
             CommandData(
@@ -130,7 +131,10 @@ def _process_other_ports(
     port_obj: UsedPort, ip_address_obj: IpAddress, *, manager: LangdonManager
 ) -> None:
     with (
-        tempfile.NamedTemporaryFile() as temp_file,
+        utils.langdon_tempfile(
+            f"langdon_nmap_fingerprint_{ip_address_obj.address}_{port_obj.port}",
+            suffix=".xml",
+        ) as temp_file,
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
             CommandData(

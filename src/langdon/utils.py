@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import hashlib
+import pathlib
+from typing import IO, TYPE_CHECKING, Any
 
 import pydantic
 from sqlalchemy import sql
@@ -120,3 +122,9 @@ def detect_ip_version(ip_address: str) -> IpAddressVersionT:
     if ":" in ip_address:
         return "ipv6"
     return "ipv4"
+
+
+def langdon_tempfile(reference: str, mode: str = "w+", suffix: str = "") -> IO:
+    """Create a temporary file with a specific reference and mode."""
+    filename = hashlib.md5(reference.encode()).hexdigest()
+    return pathlib.Path("/tmp").joinpath(f"{filename}{suffix}").open(mode=mode)

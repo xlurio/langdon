@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import event_listener, task_queue
+from langdon import event_listener, task_queue, utils
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -58,7 +57,7 @@ def _enumerate_udp_ports(ip_address_id: IpAddressId) -> None:
         ip_address = manager.session.execute(ip_address_query).scalar_one()
 
         with (
-            NamedTemporaryFile("w+", suffix=".xml") as temp_file,
+            utils.langdon_tempfile(f"langdon_nmap_udp_{ip_address.address}", suffix=".xml") as temp_file,
             suppress_duplicated_recon_process(),
             shell_command_execution_context(
                 CommandData(
@@ -76,12 +75,15 @@ def _enumerate_udp_ports(ip_address_id: IpAddressId) -> None:
 
 def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> None:
     with (
-        NamedTemporaryFile("w+", suffix=".xml") as temp_file,
+        utils.langdon_tempfile(
+            f"langdon_nmap_tcp_{ip_address.address}", suffix=".xml"
+        ) as temp_file,
         suppress_duplicated_recon_process(),
         shell_command_execution_context(
             CommandData(
                 command="nmap",
-                args=f"-Pn -sS -vv -p- -oX '{temp_file.name}' '{ip_address.address}'",
+                args=f"-Pn --max-retries 3 --host-timeout 1h -sS -vv -p- -oX "
+                f"'{temp_file.name}' '{ip_address.address}'",
             ),
             manager=manager,
         ),
