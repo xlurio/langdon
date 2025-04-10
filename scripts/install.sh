@@ -170,7 +170,7 @@ command=poetry run --project="'$HOME'/langdon" --directory="'$HOME'/recon" langd
 
 [program:langdon-graph]
 command=poetry run --project="'$HOME'/langdon" --directory="'$HOME'/recon" langdon -- --loglevel DEBUG graph
-autostart=true
+autorestart=true
 ' >> /etc/supervisord.conf
 
 # Generate subfinder config
