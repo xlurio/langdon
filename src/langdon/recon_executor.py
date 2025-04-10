@@ -72,8 +72,8 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
             _process_assetfinder_for_domains, known_domains_names, manager=manager
         )
 
-        task_queue.wait_for_all_tasks_to_finish(manager=manager, timeout=10800)
-        event_listener.wait_for_all_events_to_be_handled(manager=manager, timeout=10800)
+        task_queue.wait_for_all_tasks_to_finish(manager=manager)
+        event_listener.wait_for_all_events_to_be_handled(manager=manager)
 
 
 def _run_gau_for_chunk(chunk: set[int]) -> None:
@@ -255,8 +255,8 @@ def _discover_content_passively(*, manager: LangdonManager) -> None:
 
     _run_gau_for_known_directory_ids(known_directories_ids, manager=manager)
     _run_google_for_known_directory_ids(known_directories_ids, manager=manager)
-    task_queue.wait_for_all_tasks_to_finish(manager=manager, timeout=10800)
-    event_listener.wait_for_all_events_to_be_handled(manager=manager, timeout=10800)
+    task_queue.wait_for_all_tasks_to_finish(manager=manager)
+    event_listener.wait_for_all_events_to_be_handled(manager=manager)
 
 
 def _process_amass_for_domains(
@@ -386,8 +386,8 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     )
     _discover_domains_with_gobuster(known_domain_names, manager)
 
-    task_queue.wait_for_all_tasks_to_finish(manager=manager, timeout=10800)
-    event_listener.wait_for_all_events_to_be_handled(manager=manager, timeout=10800)
+    task_queue.wait_for_all_tasks_to_finish(manager=manager)
+    event_listener.wait_for_all_events_to_be_handled(manager=manager)
 
 
 def _get_known_domain_names(manager: LangdonManager) -> list[str]:
