@@ -157,7 +157,7 @@ def process_tasks(*, manager: LangdonManager, executor: CF.ThreadPoolExecutor) -
 
 
 def wait_for_all_tasks_to_finish(
-    *, manager: LangdonManager, timeout: int | None
+    *, manager: LangdonManager, timeout: int | None = None
 ) -> None:
     """
     Wait for all tasks in the queue to finish.
