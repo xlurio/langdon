@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
+from langdon import utils
 from langdon.langdon_logging import logger
 from langdon.models import DirCookieRel, HttpCookie, WebDirectory
-from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
     from langdon.events import HttpCookieDiscovered
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 def handle_event(event: HttpCookieDiscovered, *, manager: LangdonManager) -> None:
-    was_already_known = create_if_not_exist(
+    was_already_known = utils.create_if_not_exist(
         HttpCookie,
         name=event.name,
         manager=manager,
@@ -26,7 +26,7 @@ def handle_event(event: HttpCookieDiscovered, *, manager: LangdonManager) -> Non
     cookie_query = sql.select(HttpCookie).where(HttpCookie.name == event.name)
     cookie = manager.session.execute(cookie_query).scalar_one()
 
-    was_already_related = create_if_not_exist(
+    was_already_related = utils.create_if_not_exist(
         DirCookieRel,
         directory_id=event.web_directory_id,
         cookie_id=cookie.id,

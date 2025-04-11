@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import event_listener, task_queue
+from langdon import event_listener, task_queue, utils
 from langdon.command_executor import (
     CommandData,
     FunctionData,
@@ -63,6 +63,7 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
     if not known_domains_names:
         return logger.debug("No known domains to passively enumerate from")
 
+    utils.wait_for_slot_in_opened_files()
     with tempfile.NamedTemporaryFile("w+") as temp_file:
         temp_file.write("\n".join(known_domains_names))
         temp_file.seek(0)
@@ -388,6 +389,8 @@ def _get_known_domain_names(manager: LangdonManager) -> list[str]:
 def _generate_domains(
     known_domain_names: list[str], manager: LangdonManager
 ) -> list[str]:
+    
+    utils.wait_for_slot_in_opened_files()
     with tempfile.NamedTemporaryFile("w+") as temp_file:
         temp_file.write("\n".join(known_domain_names))
         temp_file.seek(0)
@@ -405,6 +408,7 @@ def _generate_domains(
 def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> None:
     resolvers_file = manager.config["resolvers_file"]
 
+    utils.wait_for_slot_in_opened_files()
     with tempfile.NamedTemporaryFile("w+") as temp_file:
         temp_file.write("\n".join(generated_domains))
         temp_file.seek(0)

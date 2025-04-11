@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import event_listener
+from langdon import event_listener, utils
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -13,7 +13,6 @@ from langdon.command_executor import (
 )
 from langdon.langdon_logging import logger
 from langdon.models import Domain
-from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
     from langdon.events import DomainDiscovered
@@ -40,7 +39,7 @@ def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
 
 
 def handle_event(event: DomainDiscovered, *, manager: LangdonManager) -> None:
-    was_already_known = create_if_not_exist(
+    was_already_known = utils.create_if_not_exist(
         Domain,
         name=event.name,
         manager=manager,

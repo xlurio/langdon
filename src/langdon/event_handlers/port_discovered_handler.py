@@ -16,7 +16,6 @@ from langdon.command_executor import (
 )
 from langdon.langdon_logging import logger
 from langdon.models import Domain, IpAddress, IpDomainRel, UsedPort
-from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -180,7 +179,7 @@ def _process_found_port(
 
 
 def handle_event(event: PortDiscovered, *, manager: LangdonManager) -> None:
-    was_already_known = create_if_not_exist(
+    was_already_known = utils.create_if_not_exist(
         UsedPort,
         port=event.port,
         transport_layer_protocol=event.transport_layer_protocol,

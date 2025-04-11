@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
-from langdon import event_listener
+from langdon import event_listener, utils
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -19,7 +19,6 @@ from langdon.models import (
     WebDirectory,
     WebDirTechRel,
 )
-from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
     from langdon.events import TechnologyDiscovered
@@ -69,7 +68,7 @@ def handle_event(event: TechnologyDiscovered, *, manager: LangdonManager) -> Non
 def _handle_technology_creation(
     event: TechnologyDiscovered, manager: LangdonManager
 ) -> bool:
-    already_existed = create_if_not_exist(
+    already_existed = utils.create_if_not_exist(
         Technology,
         name=event.name,
         version=event.version,
@@ -98,7 +97,7 @@ def _fetch_technology(
 def _handle_directory_relation(
     event: TechnologyDiscovered, technology: Technology, manager: LangdonManager
 ) -> None:
-    was_dir_rel_already_known = create_if_not_exist(
+    was_dir_rel_already_known = utils.create_if_not_exist(
         WebDirTechRel,
         directory_id=event.directory_id,
         technology_id=technology.id,
@@ -121,7 +120,7 @@ def _handle_directory_relation(
 def _handle_port_relation(
     event: TechnologyDiscovered, technology: Technology, manager: LangdonManager
 ) -> None:
-    was_port_rel_already_known = create_if_not_exist(
+    was_port_rel_already_known = utils.create_if_not_exist(
         PortTechRel,
         port_id=event.port_id,
         technology_id=technology.id,

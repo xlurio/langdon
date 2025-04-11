@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import sql
 
-from langdon import event_listener, throttler
+from langdon import event_listener, throttler, utils
 from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
@@ -24,7 +24,6 @@ from langdon.models import (
     WebDirectory,
     WebDirectoryScreenshot,
 )
-from langdon.utils import create_if_not_exist
 
 if TYPE_CHECKING:
     from langdon.events import WebDirectoryDiscovered
@@ -99,6 +98,7 @@ def _run_webanalyze(
         command="webanalyze", args=f"-worker 1 -host {cleaned_url} -output csv"
     )
 
+    utils.wait_for_slot_in_opened_files()
     with (
         suppress_duplicated_recon_process(),
         shell_command_execution_context(command_data, manager=manager) as output,
@@ -151,7 +151,7 @@ def _take_screenshot(
         jpeg_files = glob.glob(os.path.join(f"{gowitness_destination_dir!s}", "*.jpeg"))
         if jpeg_files:
             latest_jpeg = max(jpeg_files, key=os.path.getmtime)
-            create_if_not_exist(
+            utils.create_if_not_exist(
                 WebDirectoryScreenshot,
                 web_directory_response_id=web_directory.id,
                 defaults={"screenshot_path": pathlib.Path(latest_jpeg)},
@@ -197,7 +197,7 @@ def _process_cookies(
 
 
 def handle_event(event: WebDirectoryDiscovered, *, manager: LangdonManager) -> None:
-    was_already_known = create_if_not_exist(
+    was_already_known = utils.create_if_not_exist(
         WebDirectory,
         path=event.path,
         domain_id=event.domain_id if event.domain_id else None,

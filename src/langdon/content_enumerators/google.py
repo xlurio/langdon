@@ -14,7 +14,7 @@ from selenium.webdriver.firefox import options, service, webdriver
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support import wait
 
-from langdon import throttler
+from langdon import throttler, utils
 from langdon.exceptions import LangdonException
 
 if TYPE_CHECKING:
@@ -84,6 +84,7 @@ def _solve_captcha(driver: webdriver.WebDriver, *, manager: LangdonManager) -> N
             .get_attribute("src")
         )
 
+        utils.wait_for_slot_in_opened_files()
         with tempfile.NamedTemporaryFile("w+b", suffix=".wav") as wav_file:
             with tempfile.NamedTemporaryFile("w+b", suffix=".mp3") as mp3_file:
                 throttler.wait_for_slot(THROTTLING_QUEUE, manager=manager)

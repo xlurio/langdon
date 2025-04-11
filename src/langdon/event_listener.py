@@ -61,11 +61,24 @@ def _handle_event(event: T, *, manager: LangdonManager) -> None:
     EVENT_HANDLERS_MAPPING[type(event)](event, manager=manager)
 
 
+_event_queue_fallback: Sequence[Mapping[str, Any]] = []
+
+
 class EventListenerQueueManager(DataFileManagerABC[Sequence[Mapping[str, Any]]]):
     FILE_CONFIG_KEY = "event_queue_file"
 
     def get_default_file_initial_value(self) -> Sequence[Mapping[str, Any]]:
-        return []
+        return _event_queue_fallback
+
+    def read_data_file(self):
+        global _event_queue_fallback
+
+        result = super().read_data_file()
+
+        if result:
+            _event_queue_fallback = result
+
+        return result
 
 
 def _handle_event_message_chunk(start_index: int, end_index: int) -> None:

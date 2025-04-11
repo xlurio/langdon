@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import itertools
 import pathlib
+import time
 from typing import IO, TYPE_CHECKING, Any
 
 import pydantic
@@ -124,7 +125,19 @@ def detect_ip_version(ip_address: str) -> IpAddressVersionT:
     return "ipv4"
 
 
+def wait_for_slot_in_opened_files() -> None:
+    """Check the number of opened files and wait if it exceeds a operating system
+    threshold."""
+    import resource
+
+    soft_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+    while len(pathlib.Path("/proc/self/fd").iterdir()) >= soft_limit:
+        time.sleep(1)
+
+
 def langdon_tempfile(reference: str, mode: str = "w+", suffix: str = "") -> IO:
     """Create a temporary file with a specific reference and mode."""
     filename = hashlib.md5(reference.encode()).hexdigest()
+    wait_for_slot_in_opened_files()
     return pathlib.Path("/tmp").joinpath(f"{filename}{suffix}").open(mode=mode)

@@ -5,14 +5,9 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from langdon import utils
 from langdon.langdon_logging import logger
 from langdon.models import AndroidApp, Domain, IpAddress
-from langdon.utils import (
-    CreateBulkIfNotExistInput,
-    bulk_create_if_not_exist,
-    create_if_not_exist,
-    detect_ip_version,
-)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -92,7 +87,7 @@ def _process_cidrs(raw_dataframe: pd.DataFrame) -> None:
 
 def _import_domains(raw_dataframe: pd.DataFrame, *, manager: LangdonManager) -> None:
     for domain in raw_dataframe[raw_dataframe["asset_type"] == "URL"]["identifier"]:
-        was_already_known = create_if_not_exist(
+        was_already_known = utils.create_if_not_exist(
             Domain,
             defaults={"was_known": True},
             manager=manager,
@@ -106,7 +101,7 @@ def _import_apps(raw_dataframe: pd.DataFrame, *, manager: LangdonManager) -> Non
     for app in raw_dataframe[raw_dataframe["asset_type"] == "GOOGLE_PLAY_APP_ID"][
         "identifier"
     ]:
-        was_already_known = create_if_not_exist(
+        was_already_known = utils.create_if_not_exist(
             AndroidApp,
             manager=manager,
             android_app_id=app,
@@ -124,12 +119,12 @@ def _import_ip_addresses(
         "identifier"
     ]:
         kwargs = {"address": ip_address}
-        defaults = {"version": detect_ip_version(ip_address), "was_known": True}
+        defaults = {"version": utils.detect_ip_version(ip_address), "was_known": True}
         ip_addresses_dataset.append(
-            CreateBulkIfNotExistInput(kwargs=kwargs, defaults=defaults)
+            utils.CreateBulkIfNotExistInput(kwargs=kwargs, defaults=defaults)
         )
 
-    bulk_create_if_not_exist(
+    utils.bulk_create_if_not_exist(
         IpAddress,
         ip_addresses_dataset,
         manager=manager,

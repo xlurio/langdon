@@ -42,11 +42,24 @@ class Task(pydantic.BaseModel):
         return value
 
 
+_task_queue_fallback: Sequence[TaskDict] = []
+
+
 class TaskQueueFileManager(DataFileManagerABC[Sequence[TaskDict]]):
     FILE_CONFIG_KEY = "task_queue_file"
 
     def get_default_file_initial_value(self) -> Sequence[TaskDict]:
-        return []
+        return _task_queue_fallback
+
+    def read_data_file(self):
+        global _task_queue_fallback
+
+        result =  super().read_data_file()
+
+        if result:
+            _task_queue_fallback = result
+        
+        return result
 
 
 def submit_task(

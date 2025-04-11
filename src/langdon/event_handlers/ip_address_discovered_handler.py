@@ -14,7 +14,6 @@ from langdon.command_executor import (
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 from langdon.models import Domain, IpAddress, IpAddressId, IpDomainRel
-from langdon.utils import create_if_not_exist, detect_ip_version
 
 if TYPE_CHECKING:
     from langdon.events import IpAddressDiscovered
@@ -103,9 +102,9 @@ def _process_ip_address(ip_address: IpAddress, *, manager: LangdonManager) -> No
 
 
 def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None:
-    ip_version = detect_ip_version(event.address)
+    ip_version = utils.detect_ip_version(event.address)
 
-    was_already_discovered = create_if_not_exist(
+    was_already_discovered = utils.create_if_not_exist(
         IpAddress,
         address=event.address,
         defaults={"version": ip_version},
@@ -120,7 +119,7 @@ def handle_event(event: IpAddressDiscovered, *, manager: LangdonManager) -> None
     ip_address = manager.session.execute(query).scalar_one()
 
     if event.domain_id is not None:
-        was_relation_already_known = create_if_not_exist(
+        was_relation_already_known = utils.create_if_not_exist(
             IpDomainRel,
             ip_id=ip_address.id,
             domain_id=event.domain_id,
