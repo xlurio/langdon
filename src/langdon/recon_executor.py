@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import re
 import shlex
 import shutil
@@ -181,10 +182,7 @@ def _run_gau_for_known_directory_ids(
 ) -> None:
     CHUNK_SIZE = 8
 
-    for index in range(0, len(known_directories_ids), CHUNK_SIZE):
-        chunk_start = index
-        chunk_end = index + CHUNK_SIZE
-        chunk = known_directories_ids[chunk_start:chunk_end]
+    for chunk in itertools.batched(known_directories_ids, CHUNK_SIZE):
         task_queue.submit_task(_run_gau_for_chunk, chunk, manager=manager)
 
 
@@ -225,10 +223,7 @@ def _run_google_for_known_directory_ids(
 ) -> None:
     CHUNK_SIZE = 8
 
-    for index in range(0, len(known_directories_ids), CHUNK_SIZE):
-        chunk_start = index
-        chunk_end = index + CHUNK_SIZE
-        chunk = known_directories_ids[chunk_start:chunk_end]
+    for chunk in itertools.batched(known_directories_ids, CHUNK_SIZE):
         task_queue.submit_task(_run_google_for_chunk, chunk, manager=manager)
 
 
@@ -262,12 +257,8 @@ def _process_amass_for_domains(
     known_domains_names: set[str], *, manager: LangdonManager
 ) -> None:
     CHUNK_SIZE = 8
-    known_domains_names_list = list(known_domains_names)
 
-    for index in range(0, len(known_domains_names_list), CHUNK_SIZE):
-        chunk_start = index
-        chunk_end = index + CHUNK_SIZE
-        chunk = known_domains_names_list[chunk_start:chunk_end]
+    for chunk in itertools.batched(known_domains_names, CHUNK_SIZE):
         task_queue.submit_task(_process_amass_for_chunk, chunk, manager=manager)
 
 

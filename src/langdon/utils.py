@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
 import pathlib
 from typing import IO, TYPE_CHECKING, Any
 
@@ -60,8 +61,7 @@ def bulk_create_if_not_exist(
     """
     CHUNK_SIZE = 64
 
-    for i in range(0, len(dataset), CHUNK_SIZE):
-        chunk = dataset[i : i + CHUNK_SIZE]
+    for chunk in itertools.batched(dataset, CHUNK_SIZE):
         or_conditions = _build_or_conditions(model, chunk)
         existing_items = _fetch_existing_items(manager, model, or_conditions)
         new_items = _prepare_new_items(chunk, existing_items, model)

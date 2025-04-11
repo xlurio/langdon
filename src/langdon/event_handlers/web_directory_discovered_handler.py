@@ -43,13 +43,6 @@ def _get_domain_or_ip_name(
     return manager.session.execute(query).scalar_one()
 
 
-def _dispatch_event(
-    event_name: str, data: dict[str, Any], *, manager: LangdonManager
-) -> None:
-    event = manager.get_event_by_name(event_name)(**data)
-    event_listener.send_event_message(event, manager=manager)
-
-
 def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) -> None:
     cleaned_hostname = _get_domain_or_ip_name(web_directory, manager=manager)
     cleaned_directory_path = web_directory.path.lstrip("/")
