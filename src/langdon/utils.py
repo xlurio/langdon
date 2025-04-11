@@ -131,9 +131,11 @@ def wait_for_slot_in_opened_files() -> None:
     import resource
 
     soft_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+    files_opened = list(pathlib.Path("/proc/self/fd").iterdir())
 
-    while len(pathlib.Path("/proc/self/fd").iterdir()) >= soft_limit:
+    while len(files_opened) >= soft_limit:
         time.sleep(1)
+        files_opened = list(pathlib.Path("/proc/self/fd").iterdir())
 
 
 def langdon_tempfile(reference: str, mode: str = "w+", suffix: str = "") -> IO:
