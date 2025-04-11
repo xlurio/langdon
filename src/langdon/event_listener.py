@@ -107,7 +107,7 @@ def _process_event_data(
     curr_index: int, event_data: dict[str, Any], manager: LangdonManager
 ) -> None:
     try:
-        _handle_event_message(event_data)
+        _handle_event_message(event_data.copy())
     except Exception as e:
         logger.debug(
             "Error while handling event message: %s. Event data: %s",
@@ -127,7 +127,7 @@ def _mark_event_as_handled(
         try:
             queue[curr_index]["was_handled"] = True
         except IndexError:
-            queue.append({"was_handled": True, **event_data})
+            queue.append({**event_data, "was_handled": True})
         queue_manager.write_data_file(queue)
 
 
