@@ -112,8 +112,8 @@ def _make_graph_parser(
         "--output",
         "-o",
         type=pathlib.Path,
-        default=pathlib.Path("langdon-graph.svg"),
-        help="Path to the output file. Default is langdon-graph.svg",
+        default=pathlib.Path("langdon-graph.png"),
+        help="Path to the output file. Default is langdon-graph.png",
     )
 
 
