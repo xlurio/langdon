@@ -443,7 +443,7 @@ def _discover_domains_with_gobuster(
                 CommandData(
                     command="gobuster",
                     args=f"dns --domain {known_domain_name} --wordlist {dns_wordlist} "
-                    "--quiet --no-color --delay 5s",
+                    "--quiet --no-color --threads 5 --delay 5s",
                 ),
                 manager=manager,
             ) as output,
@@ -609,7 +609,7 @@ def _discover_content_with_gobuster(
                     f"--wordlist {content_wordlist} "
                     f"--extensions {extensions_separated_by_comma} --hide-length"
                     f"--no-status --retry --timeout 30 --useragent '{user_agent}'"
-                    f"--proxy {proxy}",
+                    f"--proxy {proxy} --threads 5",
                 ),
                 manager=manager,
             ) as output,
