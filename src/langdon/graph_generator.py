@@ -59,7 +59,7 @@ def generate_graph(
         name="langdon_graph",
         engine="sfdp",
         strict=True,
-        graph_attr={"overlap": "false", "splines": "true"},
+        graph_attr={"dpi": 70, "overlap": "false", "size": 24, "splines": "true"},
     )
 
     add_domains(dot, manager)
@@ -90,14 +90,16 @@ def _make_web_directory_node_name(directory: WebDirectory) -> str:
         directory.domain.name if directory.domain else directory.ip_address.address
     )
     cleaned_directory_path = directory.path.lstrip("/")
-    parsed_url = urllib.parse.urlunparse((
-        schema,
-        cleaned_hostname,
-        cleaned_directory_path,
-        "",
-        "",
-        "",
-    ))
+    parsed_url = urllib.parse.urlunparse(
+        (
+            schema,
+            cleaned_hostname,
+            cleaned_directory_path,
+            "",
+            "",
+            "",
+        )
+    )
 
     return re.sub(r"[^a-zA-Z0-9]", "_", parsed_url)
 
