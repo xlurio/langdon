@@ -59,7 +59,7 @@ def generate_graph(
         name="langdon_graph",
         engine="sfdp",
         strict=True,
-        graph_attr={"K": 5, "overlap": "false", "splines": "true"},
+        graph_attr={"K": "5", "overlap": "false", "splines": "true"},
     )
 
     add_domains(dot, manager)
