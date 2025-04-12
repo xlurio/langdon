@@ -5,7 +5,6 @@ import re
 import shlex
 import shutil
 import subprocess
-import tempfile
 import urllib.parse
 from typing import TYPE_CHECKING
 
@@ -63,9 +62,13 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
     if not known_domains_names:
         return logger.debug("No known domains to passively enumerate from")
 
+    file_content = "\n".join(known_domains_names)
+
     utils.wait_for_slot_in_opened_files()
-    with tempfile.NamedTemporaryFile("w+") as temp_file:
-        temp_file.write("\n".join(known_domains_names))
+    with utils.langdon_tempfile(
+        _discover_domains_from_known_ones_passively.__name__ + file_content
+    ) as temp_file:
+        temp_file.write(file_content)
         temp_file.seek(0)
 
         _process_amass_for_domains(known_domains_names, manager=manager)
@@ -389,10 +392,11 @@ def _get_known_domain_names(manager: LangdonManager) -> list[str]:
 def _generate_domains(
     known_domain_names: list[str], manager: LangdonManager
 ) -> list[str]:
-    
+    file_content = "\n".join(known_domain_names)
+
     utils.wait_for_slot_in_opened_files()
-    with tempfile.NamedTemporaryFile("w+") as temp_file:
-        temp_file.write("\n".join(known_domain_names))
+    with utils.langdon_tempfile(_generate_domains.__name__ + file_content) as temp_file:
+        temp_file.write(file_content)
         temp_file.seek(0)
 
         with (
@@ -407,10 +411,11 @@ def _generate_domains(
 
 def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> None:
     resolvers_file = manager.config["resolvers_file"]
+    file_content = "\n".join(generated_domains)
 
     utils.wait_for_slot_in_opened_files()
-    with tempfile.NamedTemporaryFile("w+") as temp_file:
-        temp_file.write("\n".join(generated_domains))
+    with utils.langdon_tempfile(_resolve_domains.__name__ + file_content) as temp_file:
+        temp_file.write(file_content)
         temp_file.seek(0)
 
         with (

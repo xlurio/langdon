@@ -54,11 +54,11 @@ class TaskQueueFileManager(DataFileManagerABC[Sequence[TaskDict]]):
     def read_data_file(self):
         global _task_queue_fallback
 
-        result =  super().read_data_file()
+        result = super().read_data_file()
 
         if result:
             _task_queue_fallback = result
-        
+
         return result
 
 
