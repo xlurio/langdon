@@ -124,10 +124,6 @@ cd "$HOME"
 
 # Wordlists
 git clone https://github.com/danielmiessler/SecLists.git
-mkdir jhaddix
-cd jhaddix
-wget https://gist.github.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
-cd $HOME
 
 # Langdon
 git clone https://github.com/xlurio/langdon.git
@@ -142,8 +138,8 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
 mkdir -p "$1"
 poetry run -P "$HOME/langdon" \
     langdon -- init --resolvers_file "$HOME/massdns/lists/resolvers.txt" \
-    --dns_wordlist "$HOME/jhaddix/all.txt" \
-    --content_wordlist "$HOME/SecLists/Discovery/Web-Content/raft-large-directories-lowercase.txt" \
+    --dns_wordlist "$HOME/SecLists/Discovery/DNS/subdomains-top1million-5000.txt" \
+    --content_wordlist "$HOME/SecLists/Discovery/Web-Content/common.txt" \
     --directory "$1"
 echo '#!/bin/bash
 

@@ -383,9 +383,6 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     )
     _discover_domains_with_gobuster(known_domain_names, manager)
 
-    task_queue.wait_for_all_tasks_to_finish(manager=manager)
-    event_listener.wait_for_all_events_to_be_handled(manager=manager)
-
 
 def _get_known_domain_names(manager: LangdonManager) -> list[str]:
     known_domains_query = sql.select(Domain.name)
@@ -454,6 +451,7 @@ def _discover_domains_with_gobuster_from_chunk(chunk: list[str]) -> None:
                         "--quiet --no-color --threads 2 --delay 1s",
                     ),
                     manager=manager,
+                    timeout=7200,
                 ) as output,
             ):
                 for domain_name in output.splitlines():
@@ -470,7 +468,9 @@ def _discover_domains_with_gobuster(
     CHUNK_SIZE = 8
 
     for chunk in itertools.batched(known_domain_names, CHUNK_SIZE):
-        task_queue.submit_task(_discover_domains_with_gobuster_from_chunk, chunk, manager=manager)
+        task_queue.submit_task(
+            _discover_domains_with_gobuster_from_chunk, chunk, manager=manager
+        )
 
 
 WEB_FILE_EXTENSIONS = (
@@ -521,19 +521,6 @@ WEB_FILE_EXTENSIONS = (
 
 
 def _discover_content_actively(*, manager: LangdonManager) -> None:
-    recon_processes_ran_query = sql.select(ReconProcess.name)
-    recon_processes_ran = set(manager.session.scalars(recon_processes_ran_query).all())
-
-    assert "dnsgen" in recon_processes_ran, (
-        "DNSGen should be run before discovering domains actively."
-    )
-    assert "massdns" in recon_processes_ran, (
-        "MassDNS should be run before discovering domains actively."
-    )
-    assert "gobuster" in recon_processes_ran, (
-        "gobuster should be run before discovering domains actively."
-    )
-
     known_urls_query = sql.select(
         Domain.name + sql.literal("/") + sql.func.ltrim(WebDirectory.path, "/")
     ).join(WebDirectory.domain)
@@ -629,9 +616,10 @@ def _discover_content_with_gobuster(
                     f"--wordlist {content_wordlist} "
                     f"--extensions {extensions_separated_by_comma} --hide-length"
                     f"--no-status --retry --timeout 30 --useragent '{user_agent}'"
-                    f"--proxy {proxy} --threads 1",
+                    f"--proxy {proxy} --threads 2",
                 ),
                 manager=manager,
+                timeout=14400,
             ) as output,
         ):
             for discovered_path in output.splitlines():
@@ -762,5 +750,18 @@ def run_recon(args: RunNamespace, *, manager: LangdonManager) -> None:
 
         _discover_domains_actively(manager=manager)
         _discover_content_actively(manager=manager)
+
+        task_queue.wait_for_all_tasks_to_finish(manager=manager)
+        event_listener.wait_for_all_events_to_be_handled(manager=manager)
+
+        recon_processes_ran_query = sql.select(ReconProcess.name)
+        recon_processes_ran = set(
+            manager.session.scalars(recon_processes_ran_query).all()
+        )
+
+        assert "dnsgen" in recon_processes_ran, "DNSGen should be run."
+        assert "massdns" in recon_processes_ran, "MassDNS should be run."
+        assert "gobuster" in recon_processes_ran, "gobuster should be run."
+        assert "katana" in recon_processes_ran, "katana should be run."
 
     print(f"{OutputColor.GREEN}Reconnaissance finished{OutputColor.RESET}")
