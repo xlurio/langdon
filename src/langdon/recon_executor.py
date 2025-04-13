@@ -6,7 +6,6 @@ import shlex
 import shutil
 import subprocess
 import urllib.parse
-from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
 
@@ -23,13 +22,11 @@ from langdon.command_executor import (
 from langdon.content_enumerators import google
 from langdon.events import DomainDiscovered, IpAddressDiscovered, WebDirectoryDiscovered
 from langdon.exceptions import LangdonProgrammingError
+from langdon.langdon_argparser import LangdonNamespace
 from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 from langdon.models import AndroidApp, Domain, IpAddress, ReconProcess, WebDirectory
 from langdon.output import OutputColor
-
-if TYPE_CHECKING:
-    from langdon.langdon_argparser import LangdonNamespace
 
 
 def _download_android_binaries() -> None:
@@ -102,25 +99,29 @@ def _get_directories_query(chunk: set[int]):
 
 
 def _build_url(directory: WebDirectory) -> str:
-    return urllib.parse.urlunparse((
-        "https" if directory.uses_ssl else "http",
-        directory.domain.name if directory.domain else directory.ip_address.address,
-        directory.path,
-        "",
-        "",
-        "",
-    ))
+    return urllib.parse.urlunparse(
+        (
+            "https" if directory.uses_ssl else "http",
+            directory.domain.name if directory.domain else directory.ip_address.address,
+            directory.path,
+            "",
+            "",
+            "",
+        )
+    )
 
 
 def _build_proxy(manager: LangdonManager) -> str:
-    return urllib.parse.urlunparse((
-        "socks5",
-        f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}",
-        "",
-        "",
-        "",
-        "",
-    ))
+    return urllib.parse.urlunparse(
+        (
+            "socks5",
+            f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}",
+            "",
+            "",
+            "",
+            "",
+        )
+    )
 
 
 def _process_gau_output(
@@ -595,15 +596,17 @@ def _discover_content_with_gobuster(
         known_domain_name = parsed_url.netloc.split(":")[0]
         known_domain_query = sql.select(Domain).filter(Domain.name == known_domain_name)
         known_domain = manager.session.execute(known_domain_query).scalar_one()
-        proxy = urllib.parse.urlunparse((
-            "socks5",
-            f"{manager.config['socks_proxy_host']}:"
-            f"{manager.config['socks_proxy_port']}",
-            "",
-            "",
-            "",
-            "",
-        ))
+        proxy = urllib.parse.urlunparse(
+            (
+                "socks5",
+                f"{manager.config['socks_proxy_host']}:"
+                f"{manager.config['socks_proxy_port']}",
+                "",
+                "",
+                "",
+                "",
+            )
+        )
 
         with (
             suppress_duplicated_recon_process(),
@@ -661,7 +664,72 @@ def _process_known_ip_addresses() -> None:
             )
 
 
-def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
+class RunNamespace(LangdonNamespace):
+    nodownloadandroidapps: bool
+    noprocessknowndomains: bool
+    noprocessknownips: bool
+    nodiscoverdomainsfromknownonespassively: bool
+    nodiscovercontentpassively: bool
+
+
+def _download_android_binaries_if_needed(
+    args: RunNamespace, *, manager: LangdonManager
+) -> None:
+    if not args.nodownloadandroidapps:
+        task_queue.submit_task(_download_android_binaries, manager=manager)
+    else:
+        logger.info(
+            "Skipping Android apps download due to --nodownloadandroidapps flag"
+        )
+
+
+def _process_known_domains_if_needed(
+    args: RunNamespace, *, manager: LangdonManager
+) -> None:
+    if not args.noprocessknowndomains:
+        task_queue.submit_task(_process_known_domains, manager=manager)
+    else:
+        logger.info(
+            "Skipping processing known domains due to --noprocessknowndomains flag"
+        )
+
+
+def _process_known_ip_addresses_if_needed(
+    args: RunNamespace, *, manager: LangdonManager
+) -> None:
+    if not args.noprocessknownips:
+        task_queue.submit_task(_process_known_ip_addresses, manager=manager)
+    else:
+        logger.info(
+            "Skipping processing known IP addresses due to --noprocessknownips flag"
+        )
+
+
+def _discover_domains_from_known_ones_passively_if_needed(
+    args: RunNamespace, *, manager: LangdonManager
+) -> None:
+    if not args.nodiscoverdomainsfromknownonespassively:
+        _discover_domains_from_known_ones_passively(manager=manager)
+    else:
+        logger.info(
+            "Skipping discovering domains from known ones passively due to "
+            "--nodiscoverdomainsfromknownonespassively flag"
+        )
+
+
+def _discover_content_passively_if_needed(
+    args: RunNamespace, *, manager: LangdonManager
+) -> None:
+    if not args.nodiscovercontentpassively:
+        _discover_content_passively(manager=manager)
+    else:
+        logger.info(
+            "Skipping discovering content passively due to --nodiscovercontentpassively"
+            " flag"
+        )
+
+
+def run_recon(args: RunNamespace, *, manager: LangdonManager) -> None:
     if args.openvpn:
         openvpn_bin_path = shutil.which("openvpn")
         subprocess.Popen([openvpn_bin_path, str(args.openvpn.absolute())], check=True)
@@ -674,11 +742,12 @@ def run_recon(args: LangdonNamespace, *, manager: LangdonManager) -> None:
     subprocess.run([webanalyze_bin_path, "-update"], check=True)
 
     with task_queue.task_queue_context(), event_listener.event_listener_context():
-        task_queue.submit_task(_download_android_binaries, manager=manager)
-        task_queue.submit_task(_process_known_domains, manager=manager)
-        task_queue.submit_task(_process_known_ip_addresses, manager=manager)
-        _discover_domains_from_known_ones_passively(manager=manager)
-        _discover_content_passively(manager=manager)
+        _download_android_binaries_if_needed(args, manager=manager)
+        _process_known_domains_if_needed(args, manager=manager)
+        _process_known_ip_addresses_if_needed(args, manager=manager)
+        _discover_domains_from_known_ones_passively_if_needed(args, manager=manager)
+        _discover_content_passively_if_needed(args, manager=manager)
+
         _discover_domains_actively(manager=manager)
         _discover_content_actively(manager=manager)
 

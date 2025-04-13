@@ -99,7 +99,34 @@ def _make_importcsv_parser(
 def _make_run_parser(
     subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
-    subparsers.add_parser("run", help="Run Langdon reconnaissance on the known assets")
+    run_parser = subparsers.add_parser(
+        "run", help="Run Langdon reconnaissance on the known assets"
+    )
+    run_parser.add_argument(
+        "--nodownloadandroidapps",
+        action=argparse.BooleanOptionalAction,
+        help="Skip downloading Android apps",
+    )
+    run_parser.add_argument(
+        "--noprocessknowndomains",
+        action=argparse.BooleanOptionalAction,
+        help="Skip processing known domains",
+    )
+    run_parser.add_argument(
+        "--noprocessknownips",
+        action=argparse.BooleanOptionalAction,
+        help="Skip processing known IPs",
+    )
+    run_parser.add_argument(
+        "--nodiscoverdomainsfromknownonespassively",
+        action=argparse.BooleanOptionalAction,
+        help="Skip discovering domains from known ones passively",
+    )
+    run_parser.add_argument(
+        "--nodiscovercontentpassively",
+        action=argparse.BooleanOptionalAction,
+        help="Skip discovering content passively",
+    )
 
 
 def _make_graph_parser(
