@@ -451,7 +451,7 @@ def _discover_domains_from_chunk(chunk: list[str]) -> None:
                     CommandData(
                         command="gobuster",
                         args=f"dns --domain {known_domain_name} --wordlist {dns_wordlist} "
-                        "--quiet --no-color --threads 5 --delay 5s",
+                        "--quiet --no-color --threads 5 --delay 1s",
                     ),
                     manager=manager,
                 ) as output,
