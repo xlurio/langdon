@@ -614,7 +614,7 @@ def _discover_content_with_gobuster(
                     f"--wordlist {content_wordlist} "
                     f"--extensions {extensions_separated_by_comma} --hide-length"
                     f"--no-status --retry --timeout 30 --useragent '{user_agent}'"
-                    f"--proxy {proxy} --threads 5",
+                    f"--proxy {proxy} --threads 1",
                 ),
                 manager=manager,
             ) as output,
