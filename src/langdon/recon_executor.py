@@ -438,7 +438,7 @@ def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> N
                     )
 
 
-def _discover_domains_from_chunk(chunk: list[str]) -> None:
+def _discover_domains_with_gobuster_from_chunk(chunk: list[str]) -> None:
     with LangdonManager() as manager:
         dns_wordlist = manager.config["dns_wordlist"]
         domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)[^.\s]*)")
@@ -470,7 +470,7 @@ def _discover_domains_with_gobuster(
     CHUNK_SIZE = 8
 
     for chunk in itertools.batched(known_domain_names, CHUNK_SIZE):
-        task_queue.submit_task(_discover_domains_from_chunk, chunk, manager=manager)
+        task_queue.submit_task(_discover_domains_with_gobuster_from_chunk, chunk, manager=manager)
 
 
 WEB_FILE_EXTENSIONS = (
