@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import itertools
 import re
 import shlex
@@ -9,11 +10,12 @@ import urllib.parse
 
 from sqlalchemy import sql
 
-from langdon import event_listener, task_queue, utils
+from langdon import event_listener, task_queue, throttler, utils
 from langdon.command_executor import (
     CommandData,
     FunctionData,
     function_execution_context,
+    internal_shell_command_execution_context,
     shell_command_execution_context,
     suppress_called_process_error,
     suppress_duplicated_recon_process,
@@ -436,30 +438,39 @@ def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> N
                     )
 
 
+def _discover_domains_from_chunk(chunk: list[str]) -> None:
+    with LangdonManager() as manager:
+        dns_wordlist = manager.config["dns_wordlist"]
+        domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)[^.\s]*)")
+
+        for known_domain_name in chunk:
+            with (
+                contextlib.suppress(subprocess.CalledProcessError),
+                suppress_duplicated_recon_process(),
+                internal_shell_command_execution_context(
+                    CommandData(
+                        command="gobuster",
+                        args=f"dns --domain {known_domain_name} --wordlist {dns_wordlist} "
+                        "--quiet --no-color --threads 5 --delay 5s",
+                    ),
+                    manager=manager,
+                ) as output,
+            ):
+                for domain_name in output.splitlines():
+                    if domain_match := domain_regex.match(domain_name):
+                        domain_name = domain_match.group("domain")
+                        event_listener.send_event_message(
+                            DomainDiscovered(name=domain_name), manager=manager
+                        )
+
+
 def _discover_domains_with_gobuster(
     known_domain_names: list[str], manager: LangdonManager
 ) -> None:
-    dns_wordlist = manager.config["dns_wordlist"]
-    domain_regex = re.compile(r"(?P<domain>(?:[^.\s]*\.)[^.\s]*)")
+    CHUNK_SIZE = 8
 
-    for known_domain_name in known_domain_names:
-        with (
-            suppress_duplicated_recon_process(),
-            shell_command_execution_context(
-                CommandData(
-                    command="gobuster",
-                    args=f"dns --domain {known_domain_name} --wordlist {dns_wordlist} "
-                    "--quiet --no-color --threads 5 --delay 5s",
-                ),
-                manager=manager,
-            ) as output,
-        ):
-            for domain_name in output.splitlines():
-                if domain_match := domain_regex.match(domain_name):
-                    domain_name = domain_match.group("domain")
-                    event_listener.send_event_message(
-                        DomainDiscovered(name=domain_name), manager=manager
-                    )
+    for chunk in itertools.batched(known_domain_names, CHUNK_SIZE):
+        task_queue.submit_task(_discover_domains_from_chunk, chunk, manager=manager)
 
 
 WEB_FILE_EXTENSIONS = (
@@ -608,6 +619,7 @@ def _discover_content_with_gobuster(
             )
         )
 
+        throttler.wait_for_slot(f"throttle_{known_domain_name}", manager=manager)
         with (
             suppress_duplicated_recon_process(),
             shell_command_execution_context(

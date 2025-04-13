@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import subprocess
 from typing import TYPE_CHECKING
 
 from sqlalchemy import sql
@@ -7,7 +9,7 @@ from sqlalchemy import sql
 from langdon import event_listener, utils
 from langdon.command_executor import (
     CommandData,
-    shell_command_execution_context,
+    internal_shell_command_execution_context,
     suppress_duplicated_recon_process,
     suppress_timeout_expired_error,
 )
@@ -21,9 +23,10 @@ if TYPE_CHECKING:
 
 def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
     with (
+        contextlib.suppress(subprocess.CalledProcessError),
         suppress_timeout_expired_error(),
         suppress_duplicated_recon_process(),
-        shell_command_execution_context(
+        internal_shell_command_execution_context(
             CommandData(command="host", args=domain.name), manager=manager, timeout=3600
         ) as result,
     ):
