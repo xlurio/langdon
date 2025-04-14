@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import csv
-import glob
 import json
-import os
-import pathlib
 import tempfile
 import urllib.parse
 from typing import TYPE_CHECKING, Any
@@ -18,28 +15,20 @@ from langdon.command_executor import (
     suppress_duplicated_recon_process,
 )
 from langdon.langdon_logging import logger
-from langdon.models import (
-    Domain,
-    IpAddress,
-    WebDirectory,
-    WebDirectoryScreenshot,
-)
+from langdon.models import WebDirectory
+from langdon.visualizers import gowitness
 
 if TYPE_CHECKING:
     from langdon.events import WebDirectoryDiscovered
     from langdon.langdon_manager import LangdonManager
 
 
-def _get_domain_or_ip_name(
-    web_directory: WebDirectory, *, manager: LangdonManager
-) -> str:
-    if web_directory.domain_id is not None:
-        query = sql.select(Domain.name).filter(Domain.id == web_directory.domain_id)
-    else:
-        query = sql.select(IpAddress.address).filter(
-            IpAddress.id == web_directory.ip_id
-        )
-    return manager.session.execute(query).scalar_one()
+def _get_domain_or_ip_name(web_directory: WebDirectory) -> str:
+    return (
+        web_directory.domain.name
+        if web_directory.domain
+        else web_directory.ip_address.address
+    )
 
 
 def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) -> None:
@@ -51,21 +40,23 @@ def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) 
 
     _analyze_with_whatweb(cleaned_url, web_directory, manager)
     _run_webanalyze(cleaned_url, web_directory, manager=manager)
-    _take_screenshot(cleaned_url, web_directory, manager=manager)
+    gowitness.take_screenshot(cleaned_url, web_directory, manager=manager)
 
 
 def _build_cleaned_url(
     web_directory: WebDirectory, cleaned_hostname: str, cleaned_directory_path: str
 ) -> str:
     schema = "https" if web_directory.uses_ssl else "http"
-    return urllib.parse.urlunparse((
-        schema,
-        cleaned_hostname,
-        cleaned_directory_path,
-        "",
-        "",
-        "",
-    ))
+    return urllib.parse.urlunparse(
+        (
+            schema,
+            cleaned_hostname,
+            cleaned_directory_path,
+            "",
+            "",
+            "",
+        )
+    )
 
 
 def _analyze_with_whatweb(
@@ -119,42 +110,6 @@ def _run_webanalyze(
                     version=row["Version"].strip() if row["Version"].strip() else None,
                     directory_id=web_directory.id,
                 ),
-                manager=manager,
-            )
-
-
-def _take_screenshot(
-    cleaned_url: str, web_directory: WebDirectory, *, manager: LangdonManager
-) -> None:
-    domain_name = _get_domain_or_ip_name(web_directory, manager=manager)
-    cleaned_directory_path = urllib.parse.urlparse(cleaned_url).path.lstrip("/")
-    gowitness_destination_dir = pathlib.Path(
-        os.path.join(
-            manager.config["web_directory_screenshots"],
-            domain_name,
-            cleaned_directory_path,
-        )
-    )
-    gowitness_destination_dir.mkdir(parents=True, exist_ok=True)
-
-    throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
-    command_data = CommandData(
-        command="gowitness",
-        args=f"scan single -u {cleaned_url} --screenshot-fullpage -s "
-        f"{gowitness_destination_dir!s}",
-    )
-
-    with (
-        suppress_duplicated_recon_process(),
-        shell_command_execution_context(command_data, manager=manager),
-    ):
-        jpeg_files = glob.glob(os.path.join(f"{gowitness_destination_dir!s}", "*.jpeg"))
-        if jpeg_files:
-            latest_jpeg = max(jpeg_files, key=os.path.getmtime)
-            utils.create_if_not_exist(
-                WebDirectoryScreenshot,
-                web_directory_response_id=web_directory.id,
-                defaults={"screenshot_path": pathlib.Path(latest_jpeg)},
                 manager=manager,
             )
 
@@ -215,6 +170,8 @@ def handle_event(event: WebDirectoryDiscovered, *, manager: LangdonManager) -> N
     session = manager.session
     query = (
         sql.select(WebDirectory)
+        .join(WebDirectory.domain, isouter=True)
+        .join(WebDirectory.ip_address)
         .where(WebDirectory.path == event.path)
         .where(
             WebDirectory.uses_ssl == event.uses_ssl,
