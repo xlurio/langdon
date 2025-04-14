@@ -357,11 +357,12 @@ def _process_assetfinder_for_domains(known_domains_names: list[str]) -> None:
                         )
 
 
-def _discover_domains_with_dnsgen_n_massdns(
-    known_domain_names: list[str], *, manager: LangdonManager
+def _discover_domains_with_dnsgen_n_massdns_from_chunk(
+    known_domain_names: list[str],
 ) -> None:
-    generated_domains = _generate_domains(known_domain_names, manager)
-    _resolve_domains(generated_domains, manager)
+    with LangdonManager() as manager:
+        generated_domains = _generate_domains(known_domain_names, manager)
+        _resolve_domains(generated_domains, manager)
 
 
 def _discover_domains_actively(*, manager: LangdonManager) -> None:
@@ -380,7 +381,12 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     if not known_domain_names:
         return logger.debug("No known domains to actively enumerate from")
 
-    _discover_domains_with_dnsgen_n_massdns(known_domain_names, manager=manager)
+    CHUNK_SIZE = 128
+
+    for chunk in itertools.batched(known_domain_names, CHUNK_SIZE):
+        task_queue.submit_task(
+            _discover_domains_with_dnsgen_n_massdns_from_chunk, chunk, manager=manager
+        )
 
     task_queue.wait_for_all_tasks_to_finish(manager=manager)
     event_listener.wait_for_all_events_to_be_handled(manager=manager)
