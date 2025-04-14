@@ -356,10 +356,11 @@ def _process_assetfinder_for_domains(known_domains_names: list[str]) -> None:
                         )
 
 
-def _discover_domains_with_dnsgen_n_massdns(known_domain_names: list[str]) -> None:
-    with LangdonManager() as manager:
-        generated_domains = _generate_domains(known_domain_names, manager)
-        _resolve_domains(generated_domains, manager)
+def _discover_domains_with_dnsgen_n_massdns(
+    known_domain_names: list[str], *, manager: LangdonManager
+) -> None:
+    generated_domains = _generate_domains(known_domain_names, manager)
+    _resolve_domains(generated_domains, manager)
 
 
 def _discover_domains_actively(*, manager: LangdonManager) -> None:
@@ -378,10 +379,10 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     if not known_domain_names:
         return logger.debug("No known domains to actively enumerate from")
 
-    task_queue.submit_task(
-        _discover_domains_with_dnsgen_n_massdns, known_domain_names, manager=manager
-    )
-    _discover_domains_with_gobuster(known_domain_names, manager)
+    _discover_domains_with_dnsgen_n_massdns(known_domain_names, manager=manager)
+
+    task_queue.wait_for_all_tasks_to_finish(manager=manager)
+    event_listener.wait_for_all_events_to_be_handled(manager=manager)
 
 
 def _get_known_domain_names(manager: LangdonManager) -> list[str]:
@@ -521,28 +522,58 @@ WEB_FILE_EXTENSIONS = (
 
 
 def _discover_content_actively(*, manager: LangdonManager) -> None:
-    known_urls_query = sql.select(
-        Domain.name + sql.literal("/") + sql.func.ltrim(WebDirectory.path, "/")
-    ).join(WebDirectory.domain)
-    known_urls = set(manager.session.scalars(known_urls_query))
+    recon_processes_ran_query = sql.select(ReconProcess.name)
+    recon_processes_ran = set(manager.session.scalars(recon_processes_ran_query).all())
 
-    if not known_urls:
-        return logger.debug("No known URLs to actively enumerate content from")
-
-    known_urls_separated_by_comma = ",".join(known_urls)
-    extensions_separated_by_comma = ",".join(WEB_FILE_EXTENSIONS)
-    user_agent = manager.config["user_agent"]
-
-    task_queue.submit_task(
-        _crawl_with_katana, known_urls_separated_by_comma, manager=manager
+    assert "dnsgen" in recon_processes_ran, (
+        "DNSGen should be run before actively discovering content."
     )
-    _discover_content_with_gobuster(
-        known_urls, extensions_separated_by_comma, user_agent, manager
+    assert "massdns" in recon_processes_ran, (
+        "MassDNS should be run before actively discovering content."
     )
 
+    known_domain_ids_query = sql.select(Domain.id)
+    known_domain_ids = set(manager.session.scalars(known_domain_ids_query).all())
 
-def _crawl_with_katana(known_urls_separated_by_comma: str) -> None:
+    if not known_domain_ids:
+        return logger.debug("No known domains to actively enumerate content from")
+
+    for domain_id in known_domain_ids:
+        _crawl_domain_with_katana(domain_id, manager=manager)
+
+    task_queue.wait_for_all_tasks_to_finish(manager=manager)
+    event_listener.wait_for_all_events_to_be_handled(manager=manager)
+
+
+def _handle_katana_result_chunk(chunk: list[str]) -> None:
     with LangdonManager() as manager:
+        for line in chunk:
+            if stripped_line := line.strip():
+                parsed_urls = urllib.parse.urlparse(stripped_line)
+                new_domain_name = parsed_urls.netloc.split(":")[0]
+                event_listener.handle_event(
+                    DomainDiscovered(name=new_domain_name), manager=manager
+                )
+
+                new_domain_query = sql.select(Domain).filter(
+                    Domain.name == new_domain_name
+                )
+                new_domain = manager.session.execute(new_domain_query).scalar_one()
+
+                path = parsed_urls.path
+                event_listener.send_event_message(
+                    WebDirectoryDiscovered(
+                        path=path, domain_id=new_domain.id, uses_ssl=True
+                    ),
+                    manager=manager,
+                )
+
+
+def _crawl_urls_with_katana(known_urls_separated_by_comma: str) -> None:
+    CHUNK_SIZE = 8
+
+    with LangdonManager() as manager:
+        user_agent = manager.config["user_agent"]
         proxy = (
             f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}"
         )
@@ -554,82 +585,110 @@ def _crawl_with_katana(known_urls_separated_by_comma: str) -> None:
                     command="katana",
                     args=f"-list {known_urls_separated_by_comma} -js-crawl "
                     f"-known-files all -proxy {proxy} -headless -delay 5s "
-                    "-rate-limit-minute 12 -silent -no-color",
+                    "-rate-limit-minute 12 -silent -no-color "
+                    f"-headers User-Agent:{user_agent}",
                 ),
                 manager=manager,
             ) as output,
         ):
-            for line in output.splitlines():
-                if line:
-                    parsed_urls = urllib.parse.urlparse(line)
-                    new_domain_name = parsed_urls.netloc.split(":")[0]
-                    event_listener.send_event_message(
-                        DomainDiscovered(name=new_domain_name), manager=manager
-                    )
+            for chunk in itertools.batched(output.splitlines(), CHUNK_SIZE):
+                task_queue.submit_task(
+                    _handle_katana_result_chunk, chunk, manager=manager
+                )
 
-                    new_domain_query = sql.select(Domain).filter(
-                        Domain.name == new_domain_name
-                    )
-                    new_domain = manager.session.execute(new_domain_query).scalar_one()
 
-                    path = parsed_urls.path
-                    event_listener.send_event_message(
-                        WebDirectoryDiscovered(
-                            path=path, domain_id=new_domain.id, uses_ssl=True
-                        ),
-                        manager=manager,
-                    )
+def _crawl_domain_with_katana(domain_id: int) -> None:
+    with LangdonManager() as manager:
+        directories_query = (
+            sql.select(WebDirectory)
+            .join(WebDirectory.domain)
+            .where(WebDirectory.domain_id == domain_id)
+        )
+        known_urls: list[str] = []
+
+        for known_directory in manager.session.scalars(directories_query):
+            known_url = urllib.parse.urlunparse(
+                (
+                    "https" if known_directory.uses_ssl else "http",
+                    known_directory.domain.name,
+                    known_directory.path,
+                    "",
+                    "",
+                    "",
+                )
+            )
+            known_urls.append(known_url)
+
+        if not known_urls:
+            return logger.debug(f"No known URLs to crawl for domain ID {domain_id}")
+
+        task_queue.submit_task(
+            _crawl_urls_with_katana, ",".join(known_urls), manager=manager
+        )
+
+
+def _discover_content_with_gobuster_from_chunk(chunk: list[str]):
+    with LangdonManager() as manager:
+        content_wordlist = manager.config["content_wordlist"]
+        extensions_separated_by_comma = ",".join(WEB_FILE_EXTENSIONS)
+        user_agent = manager.config["user_agent"]
+
+        for known_url in chunk:
+            parsed_url = urllib.parse.urlparse(known_url)
+            known_domain_name = parsed_url.netloc.split(":")[0]
+            known_domain_query = sql.select(Domain).filter(
+                Domain.name == known_domain_name
+            )
+            known_domain = manager.session.execute(known_domain_query).scalar_one()
+            proxy = urllib.parse.urlunparse(
+                (
+                    "socks5",
+                    f"{manager.config['socks_proxy_host']}:"
+                    f"{manager.config['socks_proxy_port']}",
+                    "",
+                    "",
+                    "",
+                    "",
+                )
+            )
+
+            throttler.wait_for_slot(f"throttle_{known_domain_name}", manager=manager)
+            with (
+                suppress_duplicated_recon_process(),
+                shell_command_execution_context(
+                    CommandData(
+                        command="gobuster",
+                        args=f"dir --url {known_url} --delay 5s --quiet "
+                        f"--wordlist {content_wordlist} "
+                        f"--extensions {extensions_separated_by_comma} --hide-length"
+                        f"--no-status --retry --timeout 30 --useragent '{user_agent}'"
+                        f"--proxy {proxy} --threads 2",
+                    ),
+                    manager=manager,
+                    timeout=14400,
+                ) as output,
+            ):
+                for discovered_path in output.splitlines():
+                    if cleaned_path := discovered_path.strip():
+                        event_listener.send_event_message(
+                            WebDirectoryDiscovered(
+                                path=cleaned_path,
+                                domain_id=known_domain.id,
+                                uses_ssl=True,
+                            ),
+                            manager=manager,
+                        )
 
 
 def _discover_content_with_gobuster(
-    known_urls: list[str],
-    extensions_separated_by_comma: str,
-    user_agent: str,
-    manager: LangdonManager,
+    known_urls: list[str], *, manager: LangdonManager
 ) -> None:
-    content_wordlist = manager.config["content_wordlist"]
+    CHUNK_SIZE = 8
 
-    for known_url in known_urls:
-        parsed_url = urllib.parse.urlparse(known_url)
-        known_domain_name = parsed_url.netloc.split(":")[0]
-        known_domain_query = sql.select(Domain).filter(Domain.name == known_domain_name)
-        known_domain = manager.session.execute(known_domain_query).scalar_one()
-        proxy = urllib.parse.urlunparse(
-            (
-                "socks5",
-                f"{manager.config['socks_proxy_host']}:"
-                f"{manager.config['socks_proxy_port']}",
-                "",
-                "",
-                "",
-                "",
-            )
+    for chunk in itertools.batched(known_urls, CHUNK_SIZE):
+        task_queue.submit_task(
+            _discover_content_with_gobuster_from_chunk, chunk, manager=manager
         )
-
-        throttler.wait_for_slot(f"throttle_{known_domain_name}", manager=manager)
-        with (
-            suppress_duplicated_recon_process(),
-            shell_command_execution_context(
-                CommandData(
-                    command="gobuster",
-                    args=f"dir --url {known_url} --delay 5s --quiet "
-                    f"--wordlist {content_wordlist} "
-                    f"--extensions {extensions_separated_by_comma} --hide-length"
-                    f"--no-status --retry --timeout 30 --useragent '{user_agent}'"
-                    f"--proxy {proxy} --threads 2",
-                ),
-                manager=manager,
-                timeout=14400,
-            ) as output,
-        ):
-            for discovered_path in output.splitlines():
-                if cleaned_path := discovered_path.strip():
-                    event_listener.send_event_message(
-                        WebDirectoryDiscovered(
-                            path=cleaned_path, domain_id=known_domain.id, uses_ssl=True
-                        ),
-                        manager=manager,
-                    )
 
 
 def _process_known_domains() -> None:
@@ -729,6 +788,22 @@ def _discover_content_passively_if_needed(
         )
 
 
+def _bruteforce_domains_n_content(*, manager: LangdonManager) -> None:
+    recon_processes_ran_query = sql.select(ReconProcess.name)
+    recon_processes_ran = set(manager.session.scalars(recon_processes_ran_query).all())
+
+    assert "katana" in recon_processes_ran, "katana should be run."
+
+    known_domain_names = _get_known_domain_names(manager)
+    known_urls_query = sql.select(
+        Domain.name + sql.literal("/") + sql.func.ltrim(WebDirectory.path, "/")
+    ).join(WebDirectory.domain)
+    known_urls = set(manager.session.scalars(known_urls_query))
+
+    _discover_domains_with_gobuster(known_domain_names, manager)
+    _discover_content_with_gobuster(known_urls, manager=manager)
+
+
 def run_recon(args: RunNamespace, *, manager: LangdonManager) -> None:
     if args.openvpn:
         openvpn_bin_path = shutil.which("openvpn")
@@ -750,6 +825,7 @@ def run_recon(args: RunNamespace, *, manager: LangdonManager) -> None:
 
         _discover_domains_actively(manager=manager)
         _discover_content_actively(manager=manager)
+        _bruteforce_domains_n_content(manager=manager)
 
         task_queue.wait_for_all_tasks_to_finish(manager=manager)
         event_listener.wait_for_all_events_to_be_handled(manager=manager)
@@ -759,9 +835,6 @@ def run_recon(args: RunNamespace, *, manager: LangdonManager) -> None:
             manager.session.scalars(recon_processes_ran_query).all()
         )
 
-        assert "dnsgen" in recon_processes_ran, "DNSGen should be run."
-        assert "massdns" in recon_processes_ran, "MassDNS should be run."
         assert "gobuster" in recon_processes_ran, "gobuster should be run."
-        assert "katana" in recon_processes_ran, "katana should be run."
 
     print(f"{OutputColor.GREEN}Reconnaissance finished{OutputColor.RESET}")

@@ -25,7 +25,7 @@ T = TypeVar("T", bound="Event")
 EVENT_LISTENER_QUEUE = "event_listener"
 
 
-def _handle_event(event: T, *, manager: LangdonManager) -> None:
+def handle_event(event: T, *, manager: LangdonManager) -> None:
     from langdon.event_handlers import (
         domain_discovered_handler,
         http_cookie_discovered_handler,
@@ -164,7 +164,7 @@ def _handle_event_message(body: dict[str, Any]):
             raise ValueError(f"Unknown event type: {event_type}")
 
         event = event_class(**body)
-        _handle_event(event, manager=manager)
+        handle_event(event, manager=manager)
 
 
 def _process_event_queue(*, manager: LangdonManager, executor: CF.Executor) -> bool:
