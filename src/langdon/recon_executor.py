@@ -380,7 +380,7 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     if not known_domain_names:
         return logger.debug("No known domains to actively enumerate from")
 
-    CHUNK_SIZE = 128
+    CHUNK_SIZE = 256
 
     for chunk in itertools.batched(known_domain_names, CHUNK_SIZE):
         _discover_domains_with_dnsgen_n_massdns_from_chunk(chunk, manager=manager)
