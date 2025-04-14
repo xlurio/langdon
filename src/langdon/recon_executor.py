@@ -404,7 +404,7 @@ def _generate_domains(
         with (
             suppress_duplicated_recon_process(),
             shell_command_execution_context(
-                CommandData(command="dnsgen", args=f"{temp_file.name}"),
+                CommandData(command="dnsgen", args=f"--fast {temp_file.name}"),
                 manager=manager,
             ) as output,
         ):
