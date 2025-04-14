@@ -54,7 +54,11 @@ def _process_discovered_js(
     domain_name = manager.session.execute(domain_name_query).scalar_one()
 
     throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
-    response = requests.get(discovered_js)
+    proxies = {
+        "http": "socks5://localhost:9050",
+        "https": "socks5://localhost:9050",
+    }
+    response = requests.get(discovered_js, proxies=proxies)
 
     if _should_skip_response(response, discovered_js):
         return
