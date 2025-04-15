@@ -380,7 +380,7 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     if not known_domain_names:
         return logger.debug("No known domains to actively enumerate from")
 
-    CHUNK_SIZE = 256
+    CHUNK_SIZE = 64
 
     for chunk in itertools.batched(known_domain_names, CHUNK_SIZE):
         _discover_domains_with_dnsgen_n_massdns_from_chunk(chunk, manager=manager)
@@ -424,6 +424,7 @@ def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> N
         temp_file.seek(0)
 
         with (
+            suppress_timeout_expired_error(),
             suppress_duplicated_recon_process(),
             shell_command_execution_context(
                 CommandData(
@@ -431,6 +432,7 @@ def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> N
                     args=f"--quiet --resolvers {resolvers_file} --output L {temp_file.name}",
                 ),
                 manager=manager,
+                timeout=3600,
             ) as output,
         ):
             for domain_name in output.splitlines():

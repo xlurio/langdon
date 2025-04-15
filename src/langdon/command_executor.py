@@ -90,14 +90,13 @@ def _execute_command_with_context(
 
     try:
         session.add(ReconProcess(name=command.command, args=command.args))
+        session.commit()
     except sa_exc.IntegrityError:
         logger.warning(
             "A race condition occurred while running the command %s with args %s",
             command.command,
             command.args,
         )
-    else:
-        session.commit()
 
 
 @contextlib.contextmanager
@@ -194,6 +193,7 @@ def function_execution_context(
                 args=func_data.args_kwargs_str,
             )
         )
+        session.commit()
     except sa_exc.IntegrityError:
         logger.warning(
             "A race condition occurred while running the function '%s' with args '%s'",
@@ -201,8 +201,6 @@ def function_execution_context(
             func_data.args_kwargs_str,
         )
         session.rollback()
-    else:
-        session.commit()
 
 
 @contextlib.contextmanager
