@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import urllib.parse
 from typing import Literal
 
 import sqlalchemy
@@ -134,6 +135,14 @@ class WebDirectory(SqlAlchemyModel):
     screenshots: orm.Mapped[list[WebDirectoryScreenshot]] = orm.relationship(
         back_populates="directory", cascade="all, delete-orphan"
     )
+
+    def get_full_url(self) -> str:
+        """Get the full URL of the web directory."""
+        protocol = "https" if self.uses_ssl else "http"
+        domain = self.domain.name if self.domain else self.ip_address.address
+        return urllib.parse.urlunparse(
+            (protocol, domain, self.path, "", "", "")
+        )
 
 
 HttpHeaderId = int

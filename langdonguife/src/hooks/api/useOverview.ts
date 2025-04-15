@@ -7,7 +7,7 @@ interface UseOverviewReturn {
   overview: OverviewResponse | null;
 }
 
-export default function useOverview() {
+export default function useOverview(): UseOverviewReturn {
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const toastContext = useContext(ToastContext);
 

@@ -9,14 +9,16 @@ function getUrlFromPromissingFindingData({
   data,
 }: PromissingFindingsItemProps) {
   switch (data.type) {
-    case "web_directory":
-      return `/content/${data.id}`;
-    case "used_port":
-      return `/ports/${data.id}`;
+    case "domain":
+      return `/domains/${data.id}`;
     case "technology":
       return `/technologies/${data.id}`;
+    case "used_port":
+      return `/ports/${data.id}`;
     case "vulnerability":
       return `/vulnerabilities/${data.id}`;
+    case "web_directory":
+      return `/content/${data.id}`;
     default:
       return "#";
   }

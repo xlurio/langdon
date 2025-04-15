@@ -14,42 +14,49 @@ export default function usePromissingFindings(): UsePromissingFindingsReturn {
   const [promissingFindings, setPromissingFindings] = useState<
     PromissingFindingsResult[]
   >([]);
-  const [page, setPage] = useState<number>(0);
+  const [page, setPage] = useState<number | null>(0);
+  const [nextPage, setNextPage] = useState<number | null>(null);
   const toastContext = useContext(ToastContext);
   const observedElementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     async function fetchOverview() {
       try {
-        const data = await getPromissingFindings({ page });
+        const data = await getPromissingFindings({ page: page! });
         setPromissingFindings((prevState) => [...prevState, ...data.results]);
+        setNextPage(data.next);
       } catch (error) {
         toastContext.setToastMessage(String(error));
       }
     }
-    fetchOverview();
+
+    if (page !== null) {
+      fetchOverview();
+    }
   }, [page]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setPage((prevPage) => prevPage + 1);
+          setPage(nextPage);
         }
       },
       { threshold: 1 }
     );
 
-    if (observedElementRef.current) {
-      observer.observe(observedElementRef.current);
+    const currentElement = observedElementRef.current;
+
+    if (currentElement) {
+      observer.observe(currentElement);
     }
 
     return () => {
-      if (observedElementRef.current) {
-        observer.unobserve(observedElementRef.current);
+      if (currentElement) {
+        observer.unobserve(currentElement);
       }
     };
-  }, [observedElementRef]);
+  }, [observedElementRef, nextPage]);
 
   return {
     promissingFindings,

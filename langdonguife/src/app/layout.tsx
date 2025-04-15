@@ -27,7 +27,7 @@ export default function RootLayout({
       <body className={`${roboto.variable} antialiased`}>
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
-            <header className="bg-primary flex flex-row items-center gap p-4 gap-6">
+            <header className="bg-primary flex flex-row items-center p-4 gap-6 sticky w-full z-50">
               <Link href="/">
                 <h1>Langdon GUI</h1>
               </Link>

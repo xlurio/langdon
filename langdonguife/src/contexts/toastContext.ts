@@ -8,7 +8,7 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType>({
   toastMessage: null,
-  setToastMessage: (value: SetStateAction<string | null>) => {},
+  setToastMessage: (_value: SetStateAction<string | null>) => {},
 });
 
 export { ToastContext };
