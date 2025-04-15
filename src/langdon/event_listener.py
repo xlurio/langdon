@@ -62,6 +62,7 @@ def handle_event(event: T, *, manager: LangdonManager) -> None:
 
 
 _event_queue_fallback: Sequence[Mapping[str, Any]] = []
+_already_handled_events: set[str] = set()
 
 
 class EventListenerQueueManager(DataFileManagerABC[Sequence[Mapping[str, Any]]]):
@@ -100,7 +101,9 @@ def _get_event_data(curr_index: int, manager: LangdonManager) -> dict[str, Any]:
 
 
 def _should_skip_event(event_data: dict[str, Any]) -> bool:
-    return event_data.get("was_handled", False)
+    return event_data.get("was_handled", False) or (
+        str(event_data) in _already_handled_events
+    )
 
 
 def _process_event_data(
@@ -128,6 +131,7 @@ def _mark_event_as_handled(
             queue[curr_index]["was_handled"] = True
         except IndexError:
             queue.append({**event_data, "was_handled": True})
+        _already_handled_events.add(str(event_data))
         queue_manager.write_data_file(queue)
 
 
