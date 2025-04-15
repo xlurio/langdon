@@ -175,7 +175,7 @@ def _process_event_queue(*, manager: LangdonManager, executor: CF.Executor) -> b
     with EventListenerQueueManager(manager=manager) as queue_manager:
         queue = queue_manager.read_data_file()
 
-    if all(event["was_handled"] for event in queue):
+    if all(_should_skip_event(event_data) for event_data in queue):
         return
 
     futures = []
@@ -244,9 +244,7 @@ def wait_for_all_events_to_be_handled(
             queue = event_queue_manager.read_data_file()
 
         is_event_queue_empty = all(
-            event["was_handled"]
-            for event in queue
-            if str(event) not in _already_handled_events
+            _should_skip_event(event_data) for event_data in queue
         )
 
         if end_time and time.time() > end_time:
