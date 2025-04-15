@@ -193,9 +193,6 @@ def _process_event_queue(*, manager: LangdonManager, executor: CF.Executor) -> b
 
     CF.wait(futures)
 
-    with EventListenerQueueManager(manager=manager) as queue_manager:
-        queue_manager.write_data_file([])
-
 
 def start_event_listener() -> None:
     from langdon.langdon_manager import LangdonManager
