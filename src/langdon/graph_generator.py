@@ -7,10 +7,8 @@ import urllib.parse
 from typing import TYPE_CHECKING
 
 import graphviz
-from sqlalchemy import sql
-
-from langdon.langdon_logging import logger
-from langdon.models import (
+from langdon_core.langdon_logging import logger
+from langdon_core.models import (
     DirCookieRel,
     DirHeaderRel,
     Domain,
@@ -25,6 +23,7 @@ from langdon.models import (
     WebDirectory,
     WebDirTechRel,
 )
+from sqlalchemy import sql
 
 if TYPE_CHECKING:
     from pathlib import Path

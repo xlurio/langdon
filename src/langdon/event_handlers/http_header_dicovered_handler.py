@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from langdon_core.langdon_logging import logger
+from langdon_core.models import DirHeaderRel, HttpHeader, WebDirectory
 from sqlalchemy import sql
 
 from langdon import utils
-from langdon.langdon_logging import logger
-from langdon.models import DirHeaderRel, HttpHeader, WebDirectory
 
 if TYPE_CHECKING:
     from langdon.events import HttpHeaderDiscovered

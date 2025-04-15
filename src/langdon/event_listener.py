@@ -10,8 +10,9 @@ import time
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from langdon_core.langdon_logging import logger
+
 from langdon.abc import DataFileManagerABC
-from langdon.langdon_logging import logger
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

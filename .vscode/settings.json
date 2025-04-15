@@ -2,6 +2,7 @@
     "python.analysis.extraPaths": [
         "./src"
     ],
+    "python.defaultInterpreterPath": "venv/bin/python",
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.rulers": [

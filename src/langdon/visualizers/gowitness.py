@@ -4,6 +4,11 @@ import os
 import pathlib
 import urllib.parse
 
+from langdon_core.models import (
+    WebDirectory,
+    WebDirectoryId,
+    WebDirectoryScreenshot,
+)
 from sqlalchemy import sql
 
 from langdon import throttler, utils
@@ -13,11 +18,6 @@ from langdon.command_executor import (
     suppress_duplicated_recon_process,
 )
 from langdon.langdon_manager import LangdonManager
-from langdon.models import (
-    WebDirectory,
-    WebDirectoryId,
-    WebDirectoryScreenshot,
-)
 
 
 def _get_domain_or_ip_name(web_directory: WebDirectory) -> str:
@@ -73,16 +73,14 @@ def _generate_visualization_for_dir_id_chunk(chunk: list[WebDirectoryId]) -> Non
             .where(WebDirectory.id.in_(chunk))
         )
         for known_directory in manager.session.scalars(directories_query):
-            known_url = urllib.parse.urlunparse(
-                (
-                    "https" if known_directory.uses_ssl else "http",
-                    _get_domain_or_ip_name(known_directory),
-                    known_directory.path,
-                    "",
-                    "",
-                    "",
-                )
-            )
+            known_url = urllib.parse.urlunparse((
+                "https" if known_directory.uses_ssl else "http",
+                _get_domain_or_ip_name(known_directory),
+                known_directory.path,
+                "",
+                "",
+                "",
+            ))
             take_screenshot(known_url, known_directory, manager=manager)
 
 

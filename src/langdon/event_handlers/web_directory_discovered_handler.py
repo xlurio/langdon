@@ -6,6 +6,8 @@ import tempfile
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
+from langdon_core.langdon_logging import logger
+from langdon_core.models import WebDirectory
 from sqlalchemy import sql
 
 from langdon import event_listener, throttler, utils
@@ -14,8 +16,6 @@ from langdon.command_executor import (
     shell_command_execution_context,
     suppress_duplicated_recon_process,
 )
-from langdon.langdon_logging import logger
-from langdon.models import WebDirectory
 from langdon.visualizers import gowitness
 
 if TYPE_CHECKING:
@@ -47,16 +47,14 @@ def _build_cleaned_url(
     web_directory: WebDirectory, cleaned_hostname: str, cleaned_directory_path: str
 ) -> str:
     schema = "https" if web_directory.uses_ssl else "http"
-    return urllib.parse.urlunparse(
-        (
-            schema,
-            cleaned_hostname,
-            cleaned_directory_path,
-            "",
-            "",
-            "",
-        )
-    )
+    return urllib.parse.urlunparse((
+        schema,
+        cleaned_hostname,
+        cleaned_directory_path,
+        "",
+        "",
+        "",
+    ))
 
 
 def _analyze_with_whatweb(

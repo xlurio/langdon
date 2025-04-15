@@ -4,10 +4,10 @@ import re
 from typing import TYPE_CHECKING
 
 import pandas as pd
+from langdon_core.langdon_logging import logger
+from langdon_core.models import AndroidApp, Domain, IpAddress
 
 from langdon import utils
-from langdon.langdon_logging import logger
-from langdon.models import AndroidApp, Domain, IpAddress
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -4,6 +4,8 @@ import contextlib
 import subprocess
 from typing import TYPE_CHECKING
 
+from langdon_core.langdon_logging import logger
+from langdon_core.models import Domain
 from sqlalchemy import sql
 
 from langdon import event_listener, utils
@@ -13,8 +15,6 @@ from langdon.command_executor import (
     suppress_duplicated_recon_process,
     suppress_timeout_expired_error,
 )
-from langdon.langdon_logging import logger
-from langdon.models import Domain
 
 if TYPE_CHECKING:
     from langdon.events import DomainDiscovered

@@ -7,15 +7,15 @@ import time
 from typing import IO, TYPE_CHECKING, Any
 
 import pydantic
+from langdon_core.langdon_logging import logger
 from sqlalchemy import sql
-
-from langdon.langdon_logging import logger
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from langdon_core.models import IpAddressVersionT, SqlAlchemyModel
+
     from langdon.langdon_manager import LangdonManager
-    from langdon.models import IpAddressVersionT, SqlAlchemyModel
 
 
 def create_if_not_exist(

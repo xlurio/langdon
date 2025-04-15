@@ -3,6 +3,14 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from langdon_core.langdon_logging import logger
+from langdon_core.models import (
+    PortTechRel,
+    Technology,
+    UsedPort,
+    WebDirectory,
+    WebDirTechRel,
+)
 from sqlalchemy import sql
 
 from langdon import event_listener, utils
@@ -10,14 +18,6 @@ from langdon.command_executor import (
     CommandData,
     shell_command_execution_context,
     suppress_duplicated_recon_process,
-)
-from langdon.langdon_logging import logger
-from langdon.models import (
-    PortTechRel,
-    Technology,
-    UsedPort,
-    WebDirectory,
-    WebDirTechRel,
 )
 
 if TYPE_CHECKING:

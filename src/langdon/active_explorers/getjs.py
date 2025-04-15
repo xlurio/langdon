@@ -3,6 +3,8 @@ import re
 import urllib.parse
 
 import requests
+from langdon_core.langdon_logging import logger
+from langdon_core.models import Domain, DomainId, WebDirectory
 from sqlalchemy import sql
 
 from langdon import event_listener, task_queue, throttler
@@ -12,9 +14,7 @@ from langdon.command_executor import (
     suppress_duplicated_recon_process,
 )
 from langdon.events import DomainDiscovered, WebDirectoryDiscovered
-from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
-from langdon.models import Domain, DomainId, WebDirectory
 
 
 def _process_url(url_match: re.Match, *, manager: LangdonManager):
@@ -141,16 +141,14 @@ def _discover_from_js_in_domain(domain_id: int, *, manager: LangdonManager) -> N
     known_urls: list[str] = []
 
     for known_directory in manager.session.scalars(directories_query):
-        known_url = urllib.parse.urlunparse(
-            (
-                "https" if known_directory.uses_ssl else "http",
-                known_directory.domain.name,
-                known_directory.path,
-                "",
-                "",
-                "",
-            )
-        )
+        known_url = urllib.parse.urlunparse((
+            "https" if known_directory.uses_ssl else "http",
+            known_directory.domain.name,
+            known_directory.path,
+            "",
+            "",
+            "",
+        ))
         known_urls.append(known_url)
 
     if not known_urls:

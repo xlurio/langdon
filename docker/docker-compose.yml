@@ -15,47 +15,6 @@ services:
     depends_on:
       - tor
 
-  langdonguibe:
-    build:
-      context: ..
-      dockerfile: ./docker/Dockerfile.langdon
-      tags:
-        - langdon_i
-    volumes:
-      - recon_volume:/recon
-    command:
-      [
-        "/root/.local/bin/poetry",
-        "--project",
-        "/root/langdon",
-        "--directory",
-        "/recon",
-        "run",
-        "gunicorn",
-        "--bind",
-        "0.0.0.0:5000",
-        "--access-logfile",
-        "/dev/stdout",
-        "--error-logfile",
-        "/dev/stderr",
-        "langdongui.app:app",
-      ]
-    networks:
-      - gui_network
-
-  langdonguife:
-    build:
-      context: ..
-      dockerfile: ./docker/Dockerfile.langdongui.frontend
-      tags:
-        - langdonguife_i
-    depends_on:
-      - langdonguibe
-    ports:
-      - "8080:80"
-    networks:
-      - gui_network
-
   tor:
     build:
       dockerfile: Dockerfile.tor
@@ -67,8 +26,6 @@ services:
 
 networks:
   recon_network:
-    driver: bridge
-  gui_network:
     driver: bridge
 
 volumes:

@@ -5,6 +5,8 @@ import pathlib
 import sys
 import typing
 
+from langdon_core.langdon_logging import logger
+
 from langdon import (
     assetimporter,
     crud_executor,
@@ -14,7 +16,6 @@ from langdon import (
     recon_executor,
 )
 from langdon import langdon_argparser as argparser
-from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 from langdon.langdon_t import CrudModuleT
 from langdon.output import OutputColor

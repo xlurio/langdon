@@ -2,9 +2,7 @@ import abc
 import re
 
 import pydantic
-
-from langdon.langdon_manager import register_event
-from langdon.models import (
+from langdon_core.models import (
     DomainId,
     IpAddressId,
     TechnologyId,
@@ -12,6 +10,8 @@ from langdon.models import (
     UsedPortId,
     WebDirectoryId,
 )
+
+from langdon.langdon_manager import register_event
 
 
 class Event(pydantic.BaseModel, abc.ABC): ...

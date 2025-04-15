@@ -8,6 +8,14 @@ import shutil
 import subprocess
 import urllib.parse
 
+from langdon_core.langdon_logging import logger
+from langdon_core.models import (
+    AndroidApp,
+    Domain,
+    IpAddress,
+    ReconProcess,
+    WebDirectory,
+)
 from sqlalchemy import sql
 
 from langdon import event_listener, task_queue, throttler, utils
@@ -26,9 +34,7 @@ from langdon.content_enumerators import google
 from langdon.events import DomainDiscovered, IpAddressDiscovered, WebDirectoryDiscovered
 from langdon.exceptions import LangdonProgrammingError
 from langdon.langdon_argparser import LangdonNamespace
-from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
-from langdon.models import AndroidApp, Domain, IpAddress, ReconProcess, WebDirectory
 from langdon.output import OutputColor
 
 
@@ -102,29 +108,25 @@ def _get_directories_query(chunk: set[int]):
 
 
 def _build_url(directory: WebDirectory) -> str:
-    return urllib.parse.urlunparse(
-        (
-            "https" if directory.uses_ssl else "http",
-            directory.domain.name if directory.domain else directory.ip_address.address,
-            directory.path,
-            "",
-            "",
-            "",
-        )
-    )
+    return urllib.parse.urlunparse((
+        "https" if directory.uses_ssl else "http",
+        directory.domain.name if directory.domain else directory.ip_address.address,
+        directory.path,
+        "",
+        "",
+        "",
+    ))
 
 
 def _build_proxy(manager: LangdonManager) -> str:
-    return urllib.parse.urlunparse(
-        (
-            "socks5",
-            f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}",
-            "",
-            "",
-            "",
-            "",
-        )
-    )
+    return urllib.parse.urlunparse((
+        "socks5",
+        f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}",
+        "",
+        "",
+        "",
+        "",
+    ))
 
 
 def _process_gau_output(
@@ -558,17 +560,15 @@ def _discover_content_with_gobuster_from_chunk(chunk: list[str]):
                 Domain.name == known_domain_name
             )
             known_domain = manager.session.execute(known_domain_query).scalar_one()
-            proxy = urllib.parse.urlunparse(
-                (
-                    "socks5",
-                    f"{manager.config['socks_proxy_host']}:"
-                    f"{manager.config['socks_proxy_port']}",
-                    "",
-                    "",
-                    "",
-                    "",
-                )
-            )
+            proxy = urllib.parse.urlunparse((
+                "socks5",
+                f"{manager.config['socks_proxy_host']}:"
+                f"{manager.config['socks_proxy_port']}",
+                "",
+                "",
+                "",
+                "",
+            ))
 
             throttler.wait_for_slot(f"throttle_{known_domain_name}", manager=manager)
             with (

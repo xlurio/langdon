@@ -12,9 +12,9 @@ from collections.abc import Callable, Iterator, Sequence
 from typing import Any, TypedDict
 
 import pydantic
+from langdon_core.langdon_logging import logger
 
 from langdon.abc import DataFileManagerABC
-from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
 
 TaskId = int

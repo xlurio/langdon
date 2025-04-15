@@ -5,7 +5,7 @@ description = "Tool for target applications reconnaissance"
 authors = [
     {name = "Lucas Calegario"}
 ]
-license = "LICENSE"
+license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -21,8 +21,7 @@ dependencies = [
     "wafw00f (>=2.3.1,<2.4.0)",
     "dnsgen (>=1.0.4,<1.1.0)",
     "graphviz (>=0.20.3,<0.21.0)",
-    "flask (==3.1.0)",
-    "gunicorn (>=23.0.0,<24.0.0)",
+    "langdon-core @ git+https://github.com/xlurio/langdon-core.git",
 ]
 
 [project.scripts]

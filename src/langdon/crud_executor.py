@@ -4,10 +4,7 @@ import json
 from argparse import Namespace
 from typing import TYPE_CHECKING, Any, Literal
 
-from sqlalchemy import sql
-
-from langdon.exceptions import LangdonException
-from langdon.models import (
+from langdon_core.models import (
     AndroidApp,
     DirCookieRel,
     DirHeaderRel,
@@ -24,6 +21,9 @@ from langdon.models import (
     WebDirectory,
     WebDirectoryScreenshot,
 )
+from sqlalchemy import sql
+
+from langdon.exceptions import LangdonException
 from langdon.output import OutputColor
 
 if TYPE_CHECKING:

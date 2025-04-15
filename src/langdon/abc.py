@@ -7,10 +7,11 @@ from abc import abstractmethod
 from types import TracebackType
 from typing import Generic, Self, TypeVar
 
+from langdon_core.langdon_core_t import ConfigurationKeyT
+from langdon_core.langdon_logging import logger
+
 from langdon import utils
-from langdon.langdon_logging import logger
 from langdon.langdon_manager import LangdonManager
-from langdon.langdon_t import ConfigurationKeyT
 
 T = TypeVar("T")
 
