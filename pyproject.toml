@@ -22,11 +22,11 @@ dependencies = [
     "dnsgen (>=1.0.4,<1.1.0)",
     "graphviz (>=0.20.3,<0.21.0)",
     "flask (==3.1.0)",
+    "gunicorn (>=23.0.0,<24.0.0)",
 ]
 
 [project.scripts]
 langdon="langdon.cli:run"
-langdon-gui="langdongui.app:start_app"
 
 [tool.poetry]
 packages = [{include = "langdon", from = "src"}]

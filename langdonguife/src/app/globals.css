@@ -2,14 +2,14 @@
 
 :root {
   --foreground: #fff;
-  --primary: #a855f7;
 }
 
 @theme inline {
   --color-background: var(--color-gray-800);
   --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
+  --color-primary: var(--mui-palette-primary-main);
   --color-card-bg: var(--color-gray-700);
+  --color-text: rgba(var(--mui-palette-text-primaryChannel));
   --font-sans: var(--font-roboto);
 }
 

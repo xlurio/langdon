@@ -52,11 +52,11 @@ def calculate_rates(
 ) -> PromissingFindingsRates:
     total = total_counts.total
     return PromissingFindingsRates(
-        domains=total_counts.domains / total,
-        technologies=total_counts.technologies / total,
-        used_ports=total_counts.used_ports / total,
-        vulnerabilities=total_counts.vulnerabilities / total,
-        web_directories=total_counts.web_directories / total,
+        domains=total_counts.domains / max(total, 1),
+        technologies=total_counts.technologies / max(total, 1),
+        used_ports=total_counts.used_ports / max(total, 1),
+        vulnerabilities=total_counts.vulnerabilities / max(total, 1),
+        web_directories=total_counts.web_directories / max(total, 1),
     )
 
 

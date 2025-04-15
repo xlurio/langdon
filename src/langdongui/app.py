@@ -1,7 +1,4 @@
 import pathlib
-import shlex
-import shutil
-import subprocess
 
 import flask
 
@@ -32,7 +29,7 @@ app = flask.Flask(
 
 
 @app.route("/")
-def home():
+def gui():
     return flask.render_template("index.html")
 
 
@@ -74,12 +71,3 @@ def list_promissing_findings():
             next=next_page,
             results=serialized_objects,
         ).model_dump_json()
-
-
-def start_app() -> None:
-    if not TEMPLATE_FOLDER.exists():
-        npm_executable = shutil.which("npm")
-        command = shlex.split(f"{npm_executable} run build")
-        subprocess.run(command, check=True, cwd=BASE_DIR / "langdonguife")
-
-    app.run()
