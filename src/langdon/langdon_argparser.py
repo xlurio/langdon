@@ -196,16 +196,16 @@ def _make_crud_parser_factory(
     )
 
 
-def _make_takescreenshot_parser(
+def _make_processurl_parser(
     subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
-    takescreenshot_parser = subparsers.add_parser(
-        "takescreenshot", help="Take a screenshot of a URL"
+    processurl_parser = subparsers.add_parser(
+        "processurl", help="Process URL and save its data"
     )
-    takescreenshot_parser.add_argument(
+    processurl_parser.add_argument(
         "url",
         type=str,
-        help="URL to take a screenshot of. The URL should be a string.",
+        help="URL to process. It should include the protocol (http or https).",
     )
 
 
@@ -219,7 +219,7 @@ def _iter_module_parser_factories() -> Iterator[ModuleParserFactory]:
     yield _make_importcsv_parser
     yield _make_run_parser
     yield _make_graph_parser
-    yield _make_takescreenshot_parser
+    yield _make_processurl_parser
 
     for model_module in typing.get_args(CrudModuleT):
         yield functools.partial(_make_crud_parser_factory, model=model_module)

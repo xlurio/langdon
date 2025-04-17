@@ -17,7 +17,7 @@ class ScreenshotTakerNamespace(argparse.Namespace):
     url: str
 
 
-def take_screenshot(args: ScreenshotTakerNamespace, *, manager: LangdonManager) -> None:
+def process_url(args: ScreenshotTakerNamespace, *, manager: LangdonManager) -> None:
     if args.openvpn:
         openvpn_bin_path = shutil.which("openvpn")
         subprocess.Popen([openvpn_bin_path, str(args.openvpn.absolute())], check=True)

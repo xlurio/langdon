@@ -13,10 +13,12 @@ from sqlalchemy import sql
 from langdon import event_listener, throttler, utils
 from langdon.command_executor import (
     CommandData,
+    FunctionData,
+    function_execution_context,
     shell_command_execution_context,
     suppress_duplicated_recon_process,
 )
-from langdon.visualizers import gowitness
+from langdon.visualizers import selenium
 
 if TYPE_CHECKING:
     from langdon.events import WebDirectoryDiscovered
@@ -40,21 +42,31 @@ def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) 
 
     _analyze_with_whatweb(cleaned_url, web_directory, manager)
     _run_webanalyze(cleaned_url, web_directory, manager=manager)
-    gowitness.take_screenshot(cleaned_url, web_directory, manager=manager)
+    with function_execution_context(
+        FunctionData(
+            function=selenium.take_screenshot,
+            args=(cleaned_url, web_directory),
+            kwargs={"manager": manager},
+        ),
+        manager=manager,
+    ):
+        ...
 
 
 def _build_cleaned_url(
     web_directory: WebDirectory, cleaned_hostname: str, cleaned_directory_path: str
 ) -> str:
     schema = "https" if web_directory.uses_ssl else "http"
-    return urllib.parse.urlunparse((
-        schema,
-        cleaned_hostname,
-        cleaned_directory_path,
-        "",
-        "",
-        "",
-    ))
+    return urllib.parse.urlunparse(
+        (
+            schema,
+            cleaned_hostname,
+            cleaned_directory_path,
+            "",
+            "",
+            "",
+        )
+    )
 
 
 def _analyze_with_whatweb(

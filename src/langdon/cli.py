@@ -14,7 +14,7 @@ from langdon import (
     graph_generator,
     initializer,
     recon_executor,
-    screenshot_taker,
+    url_processor,
 )
 from langdon import langdon_argparser as argparser
 from langdon.langdon_manager import LangdonManager
@@ -54,7 +54,7 @@ def run():
             "graph": lambda: graph_generator.generate_graph(
                 parsed_args, manager=manager
             ),
-            "takescreenshot": lambda: screenshot_taker.take_screenshot(
+            "processurl": lambda: url_processor.process_url(
                 parsed_args, manager=manager
             ),
             **{

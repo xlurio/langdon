@@ -149,7 +149,7 @@ def internal_shell_command_execution_context(
 
 class FunctionData(pydantic.BaseModel, Generic[T]):
     function: Callable[..., T]
-    args: Sequence[str] | None = None
+    args: Sequence | None = None
     kwargs: Mapping[str, Any] | None = None
 
     @property

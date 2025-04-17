@@ -21,7 +21,6 @@ curl -fsSL https://github.com/xlurio/langdon/raw/refs/heads/main/scripts/install
 - gau ~= 2.2.4
 - go ~= 1.24.1
 - gobuster ~= v3.6.0
-- gowitness ~= 3.0.5
 - host ~= 9.20.4
 - katana ~= v1.1.2
 - massdns ~= v1.1.0

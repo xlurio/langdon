@@ -10,7 +10,7 @@ RUN apt update -y && apt install -y \
     wget gpg curl git build-essential libssl-dev zlib1g-dev libbz2-dev \
     libreadline-dev libsqlite3-dev libncursesw5-dev xz-utils tk-dev \
     libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev dnsutils nmap \
-    ffmpeg graphviz ruby-full libyaml-dev chromium-browser
+    ffmpeg graphviz ruby-full libyaml-dev
 
 # Add Mozilla APT repository
 RUN install -d -m 0755 /etc/apt/keyrings && \
@@ -49,7 +49,6 @@ RUN wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz && \
 RUN /usr/local/go/bin/go install github.com/tomnomnom/assetfinder@latest && \
     /usr/local/go/bin/go install github.com/lc/gau/v2/cmd/gau@latest && \
     /usr/local/go/bin/go install github.com/OJ/gobuster/v3@latest && \
-    /usr/local/go/bin/go install github.com/sensepost/gowitness@latest && \
     /usr/local/go/bin/go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
     /usr/local/go/bin/go install github.com/owasp-amass/amass/v4/...@master && \
     CGO_ENABLED=1 /usr/local/go/bin/go install github.com/projectdiscovery/katana/cmd/katana@latest && \
@@ -90,7 +89,8 @@ RUN /root/.local/bin/poetry run --project="/root/langdon" langdon -- \
     --loglevel DEBUG init --resolvers_file "/root/massdns/lists/resolvers.txt" \
     --dns_wordlist "/root/SecLists/Discovery/DNS/subdomains-top1million-5000.txt" \
     --content_wordlist "/root/SecLists/Discovery/Web-Content/common.txt"
-RUN cat /recon/pyproject.toml | sed 's/socks_proxy_host = "localhost"/socks_proxy_host = "tor"/g'
+
+RUN cat /recon/pyproject.toml | sed 's/socks_proxy_host = "localhost"/socks_proxy_host = "tor"/g' > /recon/pyproject.toml
 
 RUN echo '#! /bin/bash' > /usr/local/bin/langdon && \
     echo 'exec poetry --project /root/langdon --directory /recon run langdon -- $@' >> /usr/local/bin/langdon && \
