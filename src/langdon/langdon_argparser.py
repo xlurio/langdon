@@ -196,6 +196,19 @@ def _make_crud_parser_factory(
     )
 
 
+def _make_takescreenshot_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    takescreenshot_parser = subparsers.add_parser(
+        "takescreenshot", help="Take a screenshot of a URL"
+    )
+    takescreenshot_parser.add_argument(
+        "url",
+        type=str,
+        help="URL to take a screenshot of. The URL should be a string.",
+    )
+
+
 ModuleParserFactory = Callable[
     ["argparse._SubParsersAction[argparse.ArgumentParser]"], None
 ]
@@ -206,6 +219,7 @@ def _iter_module_parser_factories() -> Iterator[ModuleParserFactory]:
     yield _make_importcsv_parser
     yield _make_run_parser
     yield _make_graph_parser
+    yield _make_takescreenshot_parser
 
     for model_module in typing.get_args(CrudModuleT):
         yield functools.partial(_make_crud_parser_factory, model=model_module)

@@ -31,7 +31,7 @@ def _get_domain_or_ip_name(web_directory: WebDirectory) -> str:
 def take_screenshot(
     cleaned_url: str, web_directory: WebDirectory, *, manager: LangdonManager
 ) -> None:
-    domain_name = _get_domain_or_ip_name(web_directory, manager=manager)
+    domain_name = _get_domain_or_ip_name(web_directory)
     cleaned_directory_path = urllib.parse.urlparse(cleaned_url).path.lstrip("/")
     gowitness_destination_dir = pathlib.Path(
         os.path.join(

@@ -129,6 +129,7 @@ git clone https://github.com/danielmiessler/SecLists.git
 # Langdon
 git clone https://github.com/xlurio/langdon.git
 pip install --user poetry
+poetry config virtualenvs.create false
 poetry install -C "$HOME/langdon"
 
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc

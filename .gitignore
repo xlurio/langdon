@@ -175,3 +175,6 @@ cython_debug/
 
 # SQLLite
 *.db
+
+# Local development files
+Makefile

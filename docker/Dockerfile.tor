@@ -1,6 +1,7 @@
 FROM alpine:3.21
 
 RUN apk add --no-cache tor
+RUN echo "SOCKSPort 0.0.0.0:9050" >> /etc/tor/torrc
 
 EXPOSE 9050
 

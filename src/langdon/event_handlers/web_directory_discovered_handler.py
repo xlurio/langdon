@@ -32,7 +32,7 @@ def _get_domain_or_ip_name(web_directory: WebDirectory) -> str:
 
 
 def _process_directory(web_directory: WebDirectory, *, manager: LangdonManager) -> None:
-    cleaned_hostname = _get_domain_or_ip_name(web_directory, manager=manager)
+    cleaned_hostname = _get_domain_or_ip_name(web_directory)
     cleaned_directory_path = web_directory.path.lstrip("/")
     cleaned_url = _build_cleaned_url(
         web_directory, cleaned_hostname, cleaned_directory_path
@@ -81,7 +81,7 @@ def _analyze_with_whatweb(
 def _run_webanalyze(
     cleaned_url: str, web_directory: WebDirectory, *, manager: LangdonManager
 ) -> None:
-    domain_name = _get_domain_or_ip_name(web_directory, manager=manager)
+    domain_name = _get_domain_or_ip_name(web_directory)
     throttler.wait_for_slot(f"throttle_{domain_name}", manager=manager)
     command_data = CommandData(
         command="webanalyze", args=f"-worker 1 -host {cleaned_url} -output csv"
@@ -169,7 +169,7 @@ def handle_event(event: WebDirectoryDiscovered, *, manager: LangdonManager) -> N
     query = (
         sql.select(WebDirectory)
         .join(WebDirectory.domain, isouter=True)
-        .join(WebDirectory.ip_address)
+        .join(WebDirectory.ip_address, isouter=True)
         .where(WebDirectory.path == event.path)
         .where(
             WebDirectory.uses_ssl == event.uses_ssl,

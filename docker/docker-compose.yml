@@ -10,8 +10,6 @@ services:
     tty: true
     networks:
       - recon_network
-    volumes:
-      - recon_volume:/recon
     depends_on:
       - tor
 
@@ -27,6 +25,3 @@ services:
 networks:
   recon_network:
     driver: bridge
-
-volumes:
-  recon_volume:

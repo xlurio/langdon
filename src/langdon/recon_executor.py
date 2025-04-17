@@ -729,7 +729,7 @@ def run_recon(args: RunNamespace, *, manager: LangdonManager) -> None:
 
     systemctl_bin_path = shutil.which("systemctl")
     systemctl_command_line = shlex.split(f"{systemctl_bin_path} restart tor")
-    subprocess.run(systemctl_command_line, check=True)
+    subprocess.run(systemctl_command_line)
 
     webanalyze_bin_path = shutil.which("webanalyze")
     subprocess.run([webanalyze_bin_path, "-update"], check=True)

@@ -5,6 +5,7 @@ import pathlib
 import sys
 import typing
 
+from langdon_core import langdon_logging
 from langdon_core.langdon_logging import logger
 
 from langdon import (
@@ -12,8 +13,8 @@ from langdon import (
     crud_executor,
     graph_generator,
     initializer,
-    langdon_logging,
     recon_executor,
+    screenshot_taker,
 )
 from langdon import langdon_argparser as argparser
 from langdon.langdon_manager import LangdonManager
@@ -51,6 +52,9 @@ def run():
             ),
             "run": lambda: recon_executor.run_recon(parsed_args, manager=manager),
             "graph": lambda: graph_generator.generate_graph(
+                parsed_args, manager=manager
+            ),
+            "takescreenshot": lambda: screenshot_taker.take_screenshot(
                 parsed_args, manager=manager
             ),
             **{
