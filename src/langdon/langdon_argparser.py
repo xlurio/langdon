@@ -209,6 +209,19 @@ def _make_processurl_parser(
     )
 
 
+def _make_processdomain_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    processdomain_parser = subparsers.add_parser(
+        "processdomain", help="Process domain and save its data"
+    )
+    processdomain_parser.add_argument(
+        "domain",
+        type=str,
+        help="Domain to process. It should include the protocol (http or https).",
+    )
+
+
 ModuleParserFactory = Callable[
     ["argparse._SubParsersAction[argparse.ArgumentParser]"], None
 ]
@@ -220,6 +233,7 @@ def _iter_module_parser_factories() -> Iterator[ModuleParserFactory]:
     yield _make_run_parser
     yield _make_graph_parser
     yield _make_processurl_parser
+    yield _make_processdomain_parser
 
     for model_module in typing.get_args(CrudModuleT):
         yield functools.partial(_make_crud_parser_factory, model=model_module)

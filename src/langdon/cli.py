@@ -11,6 +11,7 @@ from langdon_core.langdon_logging import logger
 from langdon import (
     assetimporter,
     crud_executor,
+    domain_processor,
     graph_generator,
     initializer,
     recon_executor,
@@ -55,6 +56,9 @@ def run():
                 parsed_args, manager=manager
             ),
             "processurl": lambda: url_processor.process_url(
+                parsed_args, manager=manager
+            ),
+            "processdomain": lambda: domain_processor.process_domain(
                 parsed_args, manager=manager
             ),
             **{
