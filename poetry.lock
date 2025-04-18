@@ -498,7 +498,7 @@ sqlalchemy = ">=2.0.39,<2.1.0"
 type = "git"
 url = "https://github.com/xlurio/langdon-core.git"
 reference = "HEAD"
-resolved_reference = "c929fb0bc9977ebb4f09978977fffe2c97092c54"
+resolved_reference = "e01f3d28a45563e182977a3b993c2fe0167ecaee"
 
 [[package]]
 name = "numpy"
