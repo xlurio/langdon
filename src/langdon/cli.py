@@ -10,6 +10,7 @@ from langdon_core.langdon_logging import logger
 
 from langdon import (
     assetimporter,
+    content_explorer,
     crud_executor,
     domain_processor,
     graph_generator,
@@ -59,6 +60,9 @@ def run():
                 parsed_args, manager=manager
             ),
             "processdomain": lambda: domain_processor.process_domain(
+                parsed_args, manager=manager
+            ),
+            "discfromdmn": lambda: content_explorer.discover_content_from_domain(
                 parsed_args, manager=manager
             ),
             **{

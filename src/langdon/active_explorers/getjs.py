@@ -130,7 +130,7 @@ def _discover_from_js_in_chunk(chunk: list[str], domain_id: DomainId) -> None:
                     )
 
 
-def _discover_from_js_in_domain(domain_id: int, *, manager: LangdonManager) -> None:
+def discover_from_js_in_domain(domain_id: DomainId, *, manager: LangdonManager) -> None:
     CHUNK_SIZE = 8
 
     directories_query = (
@@ -163,7 +163,7 @@ def _discover_from_js_in_domain(domain_id: int, *, manager: LangdonManager) -> N
 def _discover_from_js_in_domain_chunk(chunk: list[DomainId]) -> None:
     with LangdonManager() as manager:
         for domain_id in chunk:
-            _discover_from_js_in_domain(domain_id, manager=manager)
+            discover_from_js_in_domain(domain_id, manager=manager)
 
 
 def discover_content(*, manager: LangdonManager) -> None:

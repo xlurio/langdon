@@ -67,38 +67,37 @@ def _crawl_urls_with_katana(known_urls_separated_by_comma: str) -> None:
                 )
 
 
-def _crawl_domain_with_katana(domain_id: int) -> None:
-    with LangdonManager() as manager:
-        directories_query = (
-            sql.select(WebDirectory)
-            .join(WebDirectory.domain)
-            .where(WebDirectory.domain_id == domain_id)
-        )
-        known_urls: list[str] = []
+def crawl_domain_with_katana(domain_id: DomainId, *, manager: LangdonManager) -> None:
+    directories_query = (
+        sql.select(WebDirectory)
+        .join(WebDirectory.domain)
+        .where(WebDirectory.domain_id == domain_id)
+    )
+    known_urls: list[str] = []
 
-        for known_directory in manager.session.scalars(directories_query):
-            known_url = urllib.parse.urlunparse((
-                "https" if known_directory.uses_ssl else "http",
-                known_directory.domain.name,
-                known_directory.path,
-                "",
-                "",
-                "",
-            ))
-            known_urls.append(known_url)
+    for known_directory in manager.session.scalars(directories_query):
+        known_url = urllib.parse.urlunparse((
+            "https" if known_directory.uses_ssl else "http",
+            known_directory.domain.name,
+            known_directory.path,
+            "",
+            "",
+            "",
+        ))
+        known_urls.append(known_url)
 
-        if not known_urls:
-            return logger.debug(f"No known URLs to crawl for domain ID {domain_id}")
+    if not known_urls:
+        return logger.debug(f"No known URLs to crawl for domain ID {domain_id}")
 
-        task_queue.submit_task(
-            _crawl_urls_with_katana, ",".join(known_urls), manager=manager
-        )
+    task_queue.submit_task(
+        _crawl_urls_with_katana, ",".join(known_urls), manager=manager
+    )
 
 
 def _crawl_domain_chunk_with_katana(chunk: list[DomainId]) -> None:
     with LangdonManager() as manager:
         for domain_id in chunk:
-            _crawl_domain_with_katana(domain_id, manager=manager)
+            crawl_domain_with_katana(domain_id, manager=manager)
 
 
 def discover_content(*, manager: LangdonManager) -> None:
