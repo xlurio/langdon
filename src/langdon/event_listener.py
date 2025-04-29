@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import concurrent.futures as CF
 import contextlib
+import itertools
 import multiprocessing
 import os
 import pathlib
 import random
 import time
-from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from langdon_core.langdon_logging import logger
 
-from langdon.abc import DataFileManagerABC
+from langdon.exceptions import LangdonProgrammingError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -62,54 +62,22 @@ def handle_event(event: T, *, manager: LangdonManager) -> None:
     EVENT_HANDLERS_MAPPING[type(event)](event, manager=manager)
 
 
-_event_queue_fallback: Sequence[Mapping[str, Any]] = []
-_already_handled_events: set[str] = set()
+_event_queue: multiprocessing.Queue | None = None
 
 
-class EventListenerQueueManager(DataFileManagerABC[Sequence[Mapping[str, Any]]]):
-    FILE_CONFIG_KEY = "event_queue_file"
-
-    def get_default_file_initial_value(self) -> Sequence[Mapping[str, Any]]:
-        return _event_queue_fallback
-
-    def read_data_file(self):
-        global _event_queue_fallback
-
-        result = super().read_data_file()
-
-        if result:
-            _event_queue_fallback = result
-
-        return result
-
-
-def _handle_event_message_chunk(start_index: int, end_index: int) -> None:
+def _handle_event_message_chunk(
+    event_queue: multiprocessing.Queue, chunk_size: int
+) -> None:
     from langdon.langdon_manager import LangdonManager
 
     with LangdonManager() as manager:
-        for curr_index in range(start_index, end_index):
-            event_data = _get_event_data(curr_index, manager)
+        for _ in range(chunk_size):
+            event_data = event_queue.get()
 
-            if _should_skip_event(event_data):
-                continue
-
-            _process_event_data(curr_index, event_data, manager)
+            _process_event_data(event_data)
 
 
-def _get_event_data(curr_index: int, manager: LangdonManager) -> dict[str, Any]:
-    with EventListenerQueueManager(manager=manager) as queue_manager:
-        return queue_manager.read_data_file()[curr_index]
-
-
-def _should_skip_event(event_data: dict[str, Any]) -> bool:
-    return event_data.get("was_handled", False) or (
-        str(event_data) in _already_handled_events
-    )
-
-
-def _process_event_data(
-    curr_index: int, event_data: dict[str, Any], manager: LangdonManager
-) -> None:
+def _process_event_data(event_data: dict[str, Any]) -> None:
     try:
         _handle_event_message(event_data.copy())
     except Exception as e:
@@ -119,21 +87,6 @@ def _process_event_data(
             event_data,
             exc_info=True,
         )
-    finally:
-        _mark_event_as_handled(curr_index, event_data, manager)
-
-
-def _mark_event_as_handled(
-    curr_index: int, event_data: dict[str, Any], manager: LangdonManager
-) -> None:
-    with EventListenerQueueManager(manager=manager) as queue_manager:
-        queue = list(queue_manager.read_data_file())
-        try:
-            queue[curr_index]["was_handled"] = True
-        except IndexError:
-            queue.append({**event_data, "was_handled": True})
-        _already_handled_events.add(str(event_data))
-        queue_manager.write_data_file(queue)
 
 
 def _handle_event_message(body: dict[str, Any]):
@@ -172,30 +125,32 @@ def _handle_event_message(body: dict[str, Any]):
         handle_event(event, manager=manager)
 
 
-def _process_event_queue(*, manager: LangdonManager, executor: CF.Executor) -> bool:
-    with EventListenerQueueManager(manager=manager) as queue_manager:
-        queue = queue_manager.read_data_file()
-
-    if all(_should_skip_event(event_data) for event_data in queue):
-        return
-
+def _process_event_queue(
+    event_queue: multiprocessing.Queue, *, executor: CF.Executor
+) -> bool:
+    DEFAULT_CHUNK_SIZE = 8
     futures = []
 
-    CHUNK_SIZE = 8
+    while not event_queue.empty():
+        counter = itertools.count()
+        next_events_to_be_handled = []
+        final_chunk_size = min(DEFAULT_CHUNK_SIZE, event_queue.qsize())
+        should_append_more_events = next(counter) < final_chunk_size
 
-    for queue_index in range(0, len(queue), CHUNK_SIZE):
-        futures.append(
-            executor.submit(
-                _handle_event_message_chunk,
-                queue_index,
-                min(queue_index + CHUNK_SIZE, len(queue)),
+        while should_append_more_events:
+            next_events_to_be_handled.append(event_queue.get())
+            should_append_more_events = next(counter) < min(
+                DEFAULT_CHUNK_SIZE, event_queue.qsize()
             )
+
+        futures.append(
+            executor.submit(_handle_event_message_chunk, event_queue, final_chunk_size)
         )
 
-    CF.wait(futures)
+    CF.wait(futures) if futures else None
 
 
-def start_event_listener() -> None:
+def start_event_listener(event_queue: multiprocessing.Queue) -> None:
     from langdon.langdon_manager import LangdonManager
 
     with LangdonManager() as manager:
@@ -205,7 +160,7 @@ def start_event_listener() -> None:
             with CF.ThreadPoolExecutor(max_workers) as executor:
                 while True:
                     try:
-                        _process_event_queue(manager=manager, executor=executor)
+                        _process_event_queue(event_queue, executor=executor)
 
                     except KeyboardInterrupt:
                         break
@@ -219,7 +174,15 @@ def start_event_listener() -> None:
 
 @contextlib.contextmanager
 def event_listener_context() -> Iterator[None]:
-    process = multiprocessing.Process(target=start_event_listener)
+    global _event_queue
+
+    if _event_queue:
+        raise LangdonProgrammingError(
+            f"{event_listener_context.__name__} should be called only once"
+        )
+
+    _event_queue = multiprocessing.Queue(32)
+    process = multiprocessing.Process(target=start_event_listener, args=(_event_queue,))
     logger.debug("Starting event listener process")
 
     try:
@@ -228,25 +191,19 @@ def event_listener_context() -> Iterator[None]:
     finally:
         process.terminate()
         process.join()
+        _event_queue.close()
+        _event_queue = None
 
 
-def wait_for_all_events_to_be_handled(
-    *, manager: LangdonManager, timeout: int | None = None
-) -> None:
+def wait_for_all_events_to_be_handled(*, timeout: int | None = None) -> None:
     """Wait for all events to be handled."""
     logger.debug("Waiting for all events to be handled")
     end_time = (time.time() + timeout) if timeout else None
-    is_event_queue_empty = False
+    is_event_queue_empty = _event_queue.empty()
 
     while not is_event_queue_empty:
         time.sleep(random.randint(1, 3))
-
-        with EventListenerQueueManager(manager=manager) as event_queue_manager:
-            queue = event_queue_manager.read_data_file()
-
-        is_event_queue_empty = all(
-            _should_skip_event(event_data) for event_data in queue
-        )
+        is_event_queue_empty = _event_queue.empty()
 
         if end_time and time.time() > end_time:
             logger.warning(
@@ -255,7 +212,7 @@ def wait_for_all_events_to_be_handled(
             break
 
 
-def send_event_message(event: T, *, manager: LangdonManager) -> None:
+def send_event_message(event: T) -> None:
     """Send an event message to the event listener queue."""
     from langdon.events import Event
 
@@ -266,7 +223,11 @@ def send_event_message(event: T, *, manager: LangdonManager) -> None:
     event_data["type"] = type(event).__name__
     event_data["was_handled"] = False
 
-    with EventListenerQueueManager(manager=manager) as event_manager:
-        queue_data = list(event_manager.read_data_file())
-        queue_data.append(event_data)
-        event_manager.write_data_file(queue_data)
+    if not _event_queue:
+        raise LangdonProgrammingError(
+            f"{send_event_message.__name__} should be called within "
+            f"{event_listener_context.__name__}"
+        )
+
+    ONE_HOUR = 3600
+    _event_queue.put(event_data, True, ONE_HOUR)

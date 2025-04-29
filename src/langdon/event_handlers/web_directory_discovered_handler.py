@@ -57,16 +57,14 @@ def _build_cleaned_url(
     web_directory: WebDirectory, cleaned_hostname: str, cleaned_directory_path: str
 ) -> str:
     schema = "https" if web_directory.uses_ssl else "http"
-    return urllib.parse.urlunparse(
-        (
-            schema,
-            cleaned_hostname,
-            cleaned_directory_path,
-            "",
-            "",
-            "",
-        )
-    )
+    return urllib.parse.urlunparse((
+        schema,
+        cleaned_hostname,
+        cleaned_directory_path,
+        "",
+        "",
+        "",
+    ))
 
 
 def _analyze_with_whatweb(
@@ -120,7 +118,6 @@ def _run_webanalyze(
                     version=row["Version"].strip() if row["Version"].strip() else None,
                     directory_id=web_directory.id,
                 ),
-                manager=manager,
             )
 
 
@@ -140,8 +137,7 @@ def _process_uncommon_headers(
                     manager.get_event_by_name("HttpHeaderDiscovered")(
                         name=header,
                         web_directory_id=web_directory.id,
-                    ),
-                    manager=manager,
+                    )
                 )
 
 
@@ -156,8 +152,7 @@ def _process_cookies(
                 manager.get_event_by_name("HttpCookieDiscovered")(
                     name=cookie,
                     web_directory_id=web_directory.id,
-                ),
-                manager=manager,
+                )
             )
 
 

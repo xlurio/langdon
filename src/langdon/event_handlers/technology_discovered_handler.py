@@ -48,7 +48,6 @@ def _enumerate_vulnerabilities(
                 manager.get_event_by_name("VulnerabilityDiscovered")(
                     name=entry["Title"], source=entry["URL"], technology=technology
                 ),
-                manager=manager,
             )
 
 

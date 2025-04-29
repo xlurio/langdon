@@ -46,7 +46,6 @@ def _process_nmap_output(
                 is_filtered=is_filtered,
                 ip_address_id=ip_address.id,
             ),
-            manager=manager,
         )
 
 

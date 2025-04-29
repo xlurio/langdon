@@ -25,29 +25,25 @@ class DiscoverContentFromDomainNamespace(argparse.Namespace):
 
 
 def _build_url(directory: WebDirectory) -> str:
-    return urllib.parse.urlunparse(
-        (
-            "https" if directory.uses_ssl else "http",
-            directory.domain.name if directory.domain else directory.ip_address.address,
-            directory.path,
-            "",
-            "",
-            "",
-        )
-    )
+    return urllib.parse.urlunparse((
+        "https" if directory.uses_ssl else "http",
+        directory.domain.name if directory.domain else directory.ip_address.address,
+        directory.path,
+        "",
+        "",
+        "",
+    ))
 
 
 def _build_proxy(manager: LangdonManager) -> str:
-    return urllib.parse.urlunparse(
-        (
-            "socks5",
-            f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}",
-            "",
-            "",
-            "",
-            "",
-        )
-    )
+    return urllib.parse.urlunparse((
+        "socks5",
+        f"{manager.config['socks_proxy_host']}:{manager.config['socks_proxy_port']}",
+        "",
+        "",
+        "",
+        "",
+    ))
 
 
 def _get_directories_query(chunk: set[int]):
@@ -82,8 +78,7 @@ def _process_found_url(
     domain_name = found_url_parsed.netloc.split(":")[0]
 
     event_listener.send_event_message(
-        manager.get_event_by_name("DomainDiscovered")(name=domain_name),
-        manager=manager,
+        manager.get_event_by_name("DomainDiscovered")(name=domain_name)
     )
     new_directory_domain = _get_or_create_domain(domain_name, directory, manager)
 
@@ -94,8 +89,7 @@ def _process_found_url(
             domain_id=new_directory_domain.id if new_directory_domain else None,
             ip_address_id=directory.ip_address.id if directory.ip_address else None,
             uses_ssl=found_url_parsed.scheme == "https",
-        ),
-        manager=manager,
+        )
     )
 
 
@@ -159,6 +153,7 @@ def _run_google_for_chunk(chunk: set[int]) -> None:
                 manager,
             )
 
+
 def run_google_for_known_directory_ids(
     known_directories_ids: set[int], *, manager: LangdonManager
 ) -> None:
@@ -202,6 +197,7 @@ def _discover_content_actively_from_domain_id(
     getjs.discover_from_js_in_domain(domain_id, manager=manager)
     katana.crawl_domain_with_katana(domain_id, manager=manager)
 
+
 def discover_content_from_domain(
     args: DiscoverContentFromDomainNamespace, *, manager: LangdonManager
 ) -> None:
@@ -213,7 +209,7 @@ def discover_content_from_domain(
 
         _discover_content_passively_from_domain_id(domain_id, manager=manager)
         _discover_content_actively_from_domain_id(domain_id, manager=manager)
-        task_queue.wait_for_all_tasks_to_finish(manager=manager)
-        event_listener.wait_for_all_events_to_be_handled(manager=manager)
+        task_queue.wait_for_all_tasks_to_finish()
+        event_listener.wait_for_all_events_to_be_handled()
 
     print(f"{OutputColor.GREEN}Domain processed successfully!{OutputColor.RESET}")

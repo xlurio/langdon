@@ -50,5 +50,5 @@ max-branches = 3
 
 ignore = ["venv"]
 
-disable = "all"
-enable = "E1120"
+enable = "all"
+disable = ["F", "E1101", "W", "C", "R", "I"]

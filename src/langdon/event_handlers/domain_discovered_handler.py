@@ -37,7 +37,6 @@ def _resolve_domain(domain: Domain, *, manager: LangdonManager) -> Domain:
                     manager.get_event_by_name("IpAddressDiscovered")(
                         address=ip_address, domain_id=domain.id
                     ),
-                    manager=manager,
                 )
 
 

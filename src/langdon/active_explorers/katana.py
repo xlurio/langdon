@@ -35,7 +35,6 @@ def _handle_katana_result_chunk(chunk: list[str]) -> None:
                     WebDirectoryDiscovered(
                         path=path, domain_id=new_domain.id, uses_ssl=True
                     ),
-                    manager=manager,
                 )
 
 

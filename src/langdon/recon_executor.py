@@ -80,31 +80,8 @@ def _discover_domains_from_known_ones_passively(*, manager: LangdonManager) -> N
             _process_assetfinder_for_domains, known_domains_names, manager=manager
         )
 
-        task_queue.wait_for_all_tasks_to_finish(manager=manager)
-        event_listener.wait_for_all_events_to_be_handled(manager=manager)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        task_queue.wait_for_all_tasks_to_finish()
+        event_listener.wait_for_all_events_to_be_handled()
 
 
 def _discover_content_passively(*, manager: LangdonManager) -> None:
@@ -127,10 +104,14 @@ def _discover_content_passively(*, manager: LangdonManager) -> None:
     if not known_directories_ids:
         return logger.debug("No known directories to passively enumerate from")
 
-    content_explorer.run_gau_for_known_directory_ids(known_directories_ids, manager=manager)
-    content_explorer.run_google_for_known_directory_ids(known_directories_ids, manager=manager)
-    task_queue.wait_for_all_tasks_to_finish(manager=manager)
-    event_listener.wait_for_all_events_to_be_handled(manager=manager)
+    content_explorer.run_gau_for_known_directory_ids(
+        known_directories_ids, manager=manager
+    )
+    content_explorer.run_google_for_known_directory_ids(
+        known_directories_ids, manager=manager
+    )
+    task_queue.wait_for_all_tasks_to_finish()
+    event_listener.wait_for_all_events_to_be_handled()
 
 
 def _process_amass_for_domains(
@@ -173,9 +154,7 @@ def _process_amass_line_for_domains(
             f"A new domain was found but was not retrieved from output:\n{line}"
         )
     for domain_name in domains:
-        event_listener.send_event_message(
-            DomainDiscovered(name=domain_name), manager=manager
-        )
+        event_listener.send_event_message(DomainDiscovered(name=domain_name))
 
 
 def _process_amass_line_for_ips(
@@ -189,7 +168,6 @@ def _process_amass_line_for_ips(
     for ip_address in ip_addresses:
         event_listener.send_event_message(
             IpAddressDiscovered(address=ip_address),
-            manager=manager,
         )
 
 
@@ -204,9 +182,7 @@ def _process_subfinder(temp_file_name: str) -> None:
     ):
         for domain_name in output.splitlines():
             if domain_name:
-                event_listener.send_event_message(
-                    DomainDiscovered(name=domain_name), manager=manager
-                )
+                event_listener.send_event_message(DomainDiscovered(name=domain_name))
 
 
 def _process_assetfinder_for_domains(known_domains_names: list[str]) -> None:
@@ -225,7 +201,6 @@ def _process_assetfinder_for_domains(known_domains_names: list[str]) -> None:
                     if discovered_domain_name:
                         event_listener.send_event_message(
                             DomainDiscovered(name=discovered_domain_name),
-                            manager=manager,
                         )
 
 
@@ -257,8 +232,8 @@ def _discover_domains_actively(*, manager: LangdonManager) -> None:
     for chunk in itertools.batched(known_domain_names, CHUNK_SIZE):
         _discover_domains_with_dnsgen_n_massdns_from_chunk(chunk, manager=manager)
 
-    task_queue.wait_for_all_tasks_to_finish(manager=manager)
-    event_listener.wait_for_all_events_to_be_handled(manager=manager)
+    task_queue.wait_for_all_tasks_to_finish()
+    event_listener.wait_for_all_events_to_be_handled()
 
 
 def _get_known_domain_names(manager: LangdonManager) -> list[str]:
@@ -310,7 +285,7 @@ def _resolve_domains(generated_domains: list[str], manager: LangdonManager) -> N
             for domain_name in output.splitlines():
                 if domain_name:
                     event_listener.send_event_message(
-                        DomainDiscovered(name=domain_name), manager=manager
+                        DomainDiscovered(name=domain_name)
                     )
 
 
@@ -337,7 +312,7 @@ def _discover_domains_with_gobuster_from_chunk(chunk: list[str]) -> None:
                     if domain_match := domain_regex.match(domain_name):
                         domain_name = domain_match.group("domain")
                         event_listener.send_event_message(
-                            DomainDiscovered(name=domain_name), manager=manager
+                            DomainDiscovered(name=domain_name)
                         )
 
 
@@ -413,8 +388,8 @@ def _discover_content_actively(*, manager: LangdonManager) -> None:
     getjs.discover_content(manager=manager)
     katana.discover_content(manager=manager)
 
-    task_queue.wait_for_all_tasks_to_finish(manager=manager)
-    event_listener.wait_for_all_events_to_be_handled(manager=manager)
+    task_queue.wait_for_all_tasks_to_finish()
+    event_listener.wait_for_all_events_to_be_handled()
 
 
 def _discover_content_with_gobuster_from_chunk(chunk: list[str]):
@@ -464,7 +439,6 @@ def _discover_content_with_gobuster_from_chunk(chunk: list[str]):
                                 domain_id=known_domain.id,
                                 uses_ssl=True,
                             ),
-                            manager=manager,
                         )
 
 
@@ -488,9 +462,7 @@ def _process_known_domains() -> None:
             return logger.debug("No known domains to process")
 
         for domain_name in known_domain_names:
-            event_listener.send_event_message(
-                DomainDiscovered(name=domain_name), manager=manager
-            )
+            event_listener.send_event_message(DomainDiscovered(name=domain_name))
 
 
 def _process_known_ip_addresses() -> None:
@@ -506,9 +478,7 @@ def _process_known_ip_addresses() -> None:
             return logger.debug("No known IP addresses to process")
 
         for ip_address in manager.session.scalars(known_ip_addresses_query):
-            event_listener.send_event_message(
-                IpAddressDiscovered(address=ip_address), manager=manager
-            )
+            event_listener.send_event_message(IpAddressDiscovered(address=ip_address))
 
 
 class RunNamespace(LangdonNamespace):
@@ -595,7 +565,7 @@ def _bruteforce_domains_n_content(*, manager: LangdonManager) -> None:
 def run_recon(args: RunNamespace, *, manager: LangdonManager) -> None:
     if args.openvpn:
         openvpn_bin_path = shutil.which("openvpn")
-        subprocess.Popen([openvpn_bin_path, str(args.openvpn.absolute())], check=True)
+        subprocess.Popen([openvpn_bin_path, str(args.openvpn.absolute())])
 
     systemctl_bin_path = shutil.which("systemctl")
     systemctl_command_line = shlex.split(f"{systemctl_bin_path} restart tor")
@@ -615,8 +585,8 @@ def run_recon(args: RunNamespace, *, manager: LangdonManager) -> None:
         _discover_content_actively(manager=manager)
         _bruteforce_domains_n_content(manager=manager)
 
-        task_queue.wait_for_all_tasks_to_finish(manager=manager)
-        event_listener.wait_for_all_events_to_be_handled(manager=manager)
+        task_queue.wait_for_all_tasks_to_finish()
+        event_listener.wait_for_all_events_to_be_handled()
 
         recon_processes_ran_query = sql.select(ReconProcess.name)
         recon_processes_ran = set(

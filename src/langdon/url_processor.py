@@ -3,6 +3,7 @@ import shlex
 import shutil
 import subprocess
 import urllib.parse
+from pathlib import Path
 
 from langdon_core.models import Domain
 from sqlalchemy import sql
@@ -14,13 +15,14 @@ from langdon.output import OutputColor
 
 
 class ScreenshotTakerNamespace(argparse.Namespace):
+    openvpn: Path | None
     url: str
 
 
 def process_url(args: ScreenshotTakerNamespace, *, manager: LangdonManager) -> None:
     if args.openvpn:
         openvpn_bin_path = shutil.which("openvpn")
-        subprocess.Popen([openvpn_bin_path, str(args.openvpn.absolute())], check=True)
+        subprocess.Popen([openvpn_bin_path, str(args.openvpn.absolute())])
 
     systemctl_bin_path = shutil.which("systemctl")
     systemctl_command_line = shlex.split(f"{systemctl_bin_path} restart tor")
@@ -49,6 +51,8 @@ def process_url(args: ScreenshotTakerNamespace, *, manager: LangdonManager) -> N
             ),
             manager=manager,
         )
+        task_queue.wait_for_all_tasks_to_finish()
+        event_listener.wait_for_all_events_to_be_handled()
 
     print(
         f"{OutputColor.GREEN}Successfully taken shot from {args.url}{OutputColor.RESET}"

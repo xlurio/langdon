@@ -72,7 +72,6 @@ def _enumerate_web_directories(
                 manager.get_event_by_name("TechnologyDiscovered")(
                     name=row["firewall"], version=None, port_id=port_obj.id
                 ),
-                manager=manager,
             )
 
     # TODO discover directories from getJS
@@ -90,7 +89,6 @@ def _process_http_port(
                     manager=manager,
                     uses_ssl=port_obj.port == 443,
                 ),
-                manager=manager,
             )
             _enumerate_web_directories(port_obj, domain=domain, manager=manager)
 
@@ -102,7 +100,6 @@ def _process_http_port(
                 manager=manager,
                 uses_ssl=False,
             ),
-            manager=manager,
         )
         _enumerate_web_directories(port_obj, ip_address=ip_address_obj, manager=manager)
 
@@ -161,7 +158,6 @@ def _process_other_ports(
                 manager.get_event_by_name("TechnologyDiscovered")(
                     name=name, version=version, port_id=port_obj.id
                 ),
-                manager=manager,
             )
 
 

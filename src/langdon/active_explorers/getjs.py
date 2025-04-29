@@ -31,7 +31,6 @@ def _process_url(url_match: re.Match, *, manager: LangdonManager):
             domain_id=new_domain_id,
             uses_ssl=uses_ssl,
         ),
-        manager=manager,
     )
 
 
@@ -40,7 +39,6 @@ def _process_path(url_match: re.Match, domain_id: DomainId, *, manager: LangdonM
         WebDirectoryDiscovered(
             path=url_match.group(0), domain_id=domain_id, uses_ssl=True
         ),
-        manager=manager,
     )
 
 

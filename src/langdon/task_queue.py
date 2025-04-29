@@ -8,14 +8,16 @@ import pathlib
 import random
 import re
 import time
-from collections.abc import Callable, Iterator, Sequence
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import pydantic
 from langdon_core.langdon_logging import logger
 
-from langdon.abc import DataFileManagerABC
+from langdon.exceptions import LangdonProgrammingError
 from langdon.langdon_manager import LangdonManager
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
 
 TaskId = int
 
@@ -42,49 +44,7 @@ class Task(pydantic.BaseModel):
         return value
 
 
-_task_queue_fallback: Sequence[TaskDict] = []
-
-
-class TaskQueueFileManager(DataFileManagerABC[Sequence[TaskDict]]):
-    FILE_CONFIG_KEY = "task_queue_file"
-
-    def get_default_file_initial_value(self) -> Sequence[TaskDict]:
-        return _task_queue_fallback
-
-    def read_data_file(self):
-        global _task_queue_fallback
-
-        result = super().read_data_file()
-
-        if result:
-            _task_queue_fallback = result
-
-        return result
-
-
-def submit_task(
-    func: Callable[..., None], *args: tuple, manager: LangdonManager, **kwargs: dict
-) -> None:
-    """
-    Submit a task to the queue.
-
-    Args:
-        func (Callable[..., None]): The function to be executed.
-        *args (tuple): Positional arguments to be passed to the function.
-        **kwargs (dict): Keyword arguments to be passed to the function.
-    """
-
-    new_task = Task(
-        func=f"{func.__module__}.{func.__name__}",
-        args=args,
-        kwargs=kwargs,
-    )
-
-    with TaskQueueFileManager(manager) as file_manager:
-        current_tasks = list(file_manager.read_data_file()) + [
-            new_task.model_dump(mode="json")
-        ]
-        file_manager.write_data_file(current_tasks)
+_task_queue: multiprocessing.Queue | None = None
 
 
 def start_task_executor() -> None:
@@ -98,7 +58,7 @@ def start_task_executor() -> None:
             with CF.ThreadPoolExecutor(max_workers) as executor:
                 while True:
                     try:
-                        process_tasks(executor=executor, manager=manager)
+                        process_tasks(executor=executor)
                     except KeyboardInterrupt:
                         break
 
@@ -108,9 +68,7 @@ def start_task_executor() -> None:
             pathlib.Path(task_queue_file).unlink(missing_ok=True)
 
 
-def _process_task(
-    func: Callable[..., None], *args: tuple, task_id: TaskId, **kwargs: dict
-) -> None:
+def _process_task(func: Callable[..., None], *args: tuple, **kwargs: dict) -> None:
     """
     Process a single task.
 
@@ -123,20 +81,10 @@ def _process_task(
         func(*args, **kwargs)
 
     except Exception as e:
-        logger.debug("Error executing task %s: %s", task_id, e, exc_info=True)
-
-    finally:
-        with LangdonManager() as manager, TaskQueueFileManager(manager) as file_manager:
-            tasks = list(file_manager.read_data_file())
-            try:
-                tasks[task_id]["was_executed"] = True
-            except IndexError:
-                tasks.append({"func": func.__name__, "was_executed": True})
-
-            file_manager.write_data_file(tasks)
+        logger.debug("Error executing task: %s", e, exc_info=True)
 
 
-def process_tasks(*, manager: LangdonManager, executor: CF.ThreadPoolExecutor) -> None:
+def process_tasks(*, executor: CF.ThreadPoolExecutor) -> None:
     """
     Process tasks from the task queue.
 
@@ -144,36 +92,21 @@ def process_tasks(*, manager: LangdonManager, executor: CF.ThreadPoolExecutor) -
         file_manager (TaskQueueFileManager): The file manager for the task queue.
         executor (CF.ThreadPoolExecutor): The thread pool executor.
     """
-    with TaskQueueFileManager(manager) as file_manager:
-        tasks = file_manager.read_data_file()
-
-    if all(task["was_executed"] for task in tasks):
-        return
-
     futures = []
 
-    for task_id, raw_task in enumerate(tasks):
-        if raw_task["was_executed"]:
-            continue
-
-        task = Task.model_validate(raw_task)
+    while not _task_queue.empty():
+        task = Task.model_validate(_task_queue.get())
 
         module_name, func_name = task.func.rsplit(".", 1)
         module = __import__(module_name, fromlist=[func_name])
         func = getattr(module, func_name)
 
-        futures.append(
-            executor.submit(
-                _process_task, func, *task.args, task_id=task_id, **task.kwargs
-            )
-        )
+        futures.append(executor.submit(_process_task, func, *task.args, **task.kwargs))
 
-    CF.wait(futures)
+    CF.wait(futures) if futures else None
 
 
-def wait_for_all_tasks_to_finish(
-    *, manager: LangdonManager, timeout: int | None = None
-) -> None:
+def wait_for_all_tasks_to_finish(*, timeout: int | None = None) -> None:
     """
     Wait for all tasks in the queue to finish.
 
@@ -184,15 +117,11 @@ def wait_for_all_tasks_to_finish(
     logger.debug("Waiting for all tasks to finish")
     end_time = (time.time() + timeout) if timeout else None
 
-    is_task_queue_empty = False
+    is_task_queue_empty = _task_queue.empty()
 
     while not is_task_queue_empty:
         time.sleep(random.randint(1, 3))
-
-        with TaskQueueFileManager(manager) as file_manager:
-            tasks = file_manager.read_data_file()
-
-        is_task_queue_empty = all(task["was_executed"] for task in tasks)
+        is_task_queue_empty = _task_queue.empty()
 
         if end_time and time.time() > end_time:
             logger.warning(
@@ -206,7 +135,16 @@ def task_queue_context() -> Iterator[None]:
     """
     Context manager for the task queue.
     """
-    process = multiprocessing.Process(target=start_task_executor)
+    global _task_queue
+
+    if _task_queue:
+        raise LangdonProgrammingError(
+            f"{task_queue_context.__name__} should be called only once"
+        )
+
+    _task_queue = multiprocessing.Queue(4)
+
+    process = multiprocessing.Process(target=start_task_executor, args=(_task_queue,))
     logger.debug("Starting task queue process")
 
     try:
@@ -214,3 +152,31 @@ def task_queue_context() -> Iterator[None]:
     finally:
         process.terminate()
         process.join()
+        _task_queue.close()
+        _task_queue = None
+
+
+def submit_task(
+    func: Callable[..., None], *args: tuple, manager: LangdonManager, **kwargs: dict
+) -> None:
+    """
+    Submit a task to the queue.
+
+    Args:
+        func (Callable[..., None]): The function to be executed.
+        *args (tuple): Positional arguments to be passed to the function.
+        **kwargs (dict): Keyword arguments to be passed to the function.
+    """
+    new_task = Task(
+        func=f"{func.__module__}.{func.__name__}",
+        args=args,
+        kwargs=kwargs,
+    )
+
+    if not _task_queue:
+        raise LangdonProgrammingError(
+            f"{submit_task.__name__} should be called within "
+            f"{task_queue_context.__name__}"
+        )
+
+    _task_queue.put(new_task.model_dump(mode="json"))
