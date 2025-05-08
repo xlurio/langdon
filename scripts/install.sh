@@ -26,7 +26,7 @@ Pin-Priority: 1000
 apt update -y ; apt install -y tor firefox build-essential libssl-dev \
     zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev \
     xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev dnsutils nmap \
-    ffmpeg graphviz ruby-full libyaml-dev build-essential chromium-browser
+    ffmpeg graphviz ruby-full libyaml-dev build-essential
 
 # PyEnv
 curl -fsSL https://pyenv.run | bash
@@ -85,8 +85,11 @@ echo 'export PATH="$PATH:'$HOME'/go/bin"' >> ~/.profile
 
 # ExploitDB
 git clone https://gitlab.com/exploit-database/exploitdb.git
+cd exploitdb
+chmod +x searchsploit
 echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.bashrc
 echo 'export PATH="$PATH:$HOME/exploitdb"' >> ~/.profile
+cd "$HOME"
 . ~/.bashrc
 
 # MassDNS
