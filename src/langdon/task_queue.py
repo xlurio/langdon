@@ -142,7 +142,7 @@ def task_queue_context() -> Iterator[None]:
             f"{task_queue_context.__name__} should be called only once"
         )
 
-    _task_queue = multiprocessing.Queue(4)
+    _task_queue = multiprocessing.Queue(32)
 
     process = multiprocessing.Process(target=start_task_executor, args=(_task_queue,))
     logger.debug("Starting task queue process")
