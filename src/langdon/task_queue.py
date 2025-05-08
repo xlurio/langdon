@@ -179,4 +179,5 @@ def submit_task(
             f"{task_queue_context.__name__}"
         )
 
-    _task_queue.put(new_task.model_dump(mode="json"))
+    FIVE_MINUTES = 300
+    _task_queue.put(new_task.model_dump(mode="json"), True, FIVE_MINUTES)
