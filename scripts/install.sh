@@ -23,10 +23,10 @@ Pin-Priority: 1000
 ' | tee /etc/apt/preferences.d/mozilla
 
 # APT Packages
-apt update -y ; apt install -y tor firefox build-essential libssl-dev \
+apt update -y ; apt install -y build-essential libssl-dev \
     zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev \
     xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev dnsutils nmap \
-    ffmpeg graphviz ruby-full libyaml-dev
+    ffmpeg graphviz ruby-full libyaml-dev tor firefox
 
 # PyEnv
 curl -fsSL https://pyenv.run | bash
